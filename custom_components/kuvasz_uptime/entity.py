@@ -1,0 +1,56 @@
+"""Base entity for Kuvasz monitors."""
+from __future__ import annotations
+
+from typing import Any
+
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
+
+from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH
+from .coordinator import KuvaszCoordinator
+
+
+class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
+    """Base class for all Kuvasz monitor entities."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: KuvaszCoordinator,
+        monitor: dict[str, Any],
+    ) -> None:
+        super().__init__(coordinator)
+        self._monitor_id: int = monitor["id"]
+        self._monitor_type: str = monitor["_type"]
+        self._monitor_name: str = monitor["name"]
+
+    def _build_entity_id(self, platform: str, key: str) -> str:
+        name_slug = slugify(self._monitor_name)
+        return f"{platform}.kuvasz_{self._monitor_type}_{name_slug}_{key}"
+
+    @property
+    def _monitor_data(self) -> dict[str, Any]:
+        for m in self.coordinator.data.monitors:
+            if m["id"] == self._monitor_id and m["_type"] == self._monitor_type:
+                return m
+        return {}
+
+    @property
+    def _monitor_stats(self) -> dict[str, Any]:
+        return self.coordinator.data.monitor_stats(self._monitor_type, self._monitor_id)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        type_labels = {
+            MONITOR_TYPE_HTTP: "HTTP",
+            MONITOR_TYPE_PUSH: "Push",
+        }
+        type_label = type_labels.get(self._monitor_type, self._monitor_type.upper())
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self._monitor_type}_{self._monitor_id}")},
+            name=self._monitor_name,
+            manufacturer="Kuvasz Uptime",
+            model=f"{type_label} Monitor",
+        )

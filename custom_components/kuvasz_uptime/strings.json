@@ -1,0 +1,99 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to your Kuvasz Uptime instance",
+        "data": {
+          "host": "Host URL (e.g. http://192.168.1.10:8080)",
+          "api_key": "API Key",
+          "scan_interval": "Polling interval (seconds)",
+          "stats_period": "Statistics period"
+        }
+      },
+      "monitors": {
+        "title": "Select Monitors",
+        "data": {
+          "selected_monitors": "Monitors to track"
+        },
+        "description": "Choose which monitors should be exposed as devices. All monitors are selected by default."
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the given instance.",
+      "invalid_auth": "Invalid API key.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This instance is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure your integration",
+        "data": {
+          "scan_interval": "Polling interval (seconds)",
+          "stats_period": "Statistics period",
+          "selected_monitors": "Monitors to track"
+        },
+        "description": "Update the polling interval, statistics period, or change which monitors are exposed as devices."
+      }
+    },
+    "abort": {
+      "cannot_connect": "Failed to connect to the given instance. Check that it is reachable and try again."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "uptime_status": {
+        "name": "Uptime Status"
+      },
+      "ssl_status": {
+        "name": "SSL Status"
+      },
+      "enabled": {
+        "name": "Enabled"
+      }
+    },
+    "sensor": {
+      "uptime_ratio": {
+        "name": "Uptime Ratio"
+      },
+      "average_latency_in_ms": {
+        "name": "Average Latency in ms"
+      },
+      "uptime_status_started_at": {
+        "name": "Uptime Status Started At"
+      },
+      "last_uptime_check": {
+        "name": "Last Uptime Check"
+      },
+      "next_uptime_check": {
+        "name": "Next Uptime Check"
+      },
+      "ssl_status_started_at": {
+        "name": "SSL Status Started At"
+      },
+      "last_ssl_check": {
+        "name": "Last SSL Check"
+      },
+      "next_ssl_check": {
+        "name": "Next SSL Check"
+      },
+      "ssl_valid_until": {
+        "name": "SSL Valid Until"
+      },
+      "last_heartbeat": {
+        "name": "Last Heartbeat"
+      },
+      "next_expected_heartbeat": {
+        "name": "Next Expected Heartbeat"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Enabled"
+      }
+    }
+  }
+}
