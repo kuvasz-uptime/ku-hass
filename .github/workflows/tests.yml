@@ -20,3 +20,7 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run tests
         run: pytest tests/ -q
+      - name: HACS validation
+        uses: "hacs/action@main"
+        with:
+          category: "integration"

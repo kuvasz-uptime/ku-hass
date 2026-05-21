@@ -6,19 +6,21 @@ import pytest
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
 from custom_components.kuvasz_uptime.coordinator import KuvaszCoordinator, KuvaszCoordinatorData
-from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
+from tests.conftest import HTTP_MONITOR_UP, ICMP_MONITOR_UP, PUSH_MONITOR_UP
 
 
-def _make_coordinator(hass, monitors, *, http_read_only=False, push_read_only=False):
+def _make_coordinator(hass, monitors, *, http_read_only=False, push_read_only=False, icmp_read_only=False):
     client = MagicMock(spec=KuvaszClient)
     client.patch_http_monitor = AsyncMock()
     client.patch_push_monitor = AsyncMock()
+    client.patch_icmp_monitor = AsyncMock()
     coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
         stats={},
         http_read_only=http_read_only,
         push_read_only=push_read_only,
+        icmp_read_only=icmp_read_only,
     )
     return coordinator
 
@@ -134,3 +136,33 @@ class TestEnabledSwitchActions:
 
         coordinator.client.patch_push_monitor.assert_awaited_once_with(20, {"enabled": False})
         coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_turn_on_patches_icmp_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [{**ICMP_MONITOR_UP, "enabled": False}])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_on()
+
+        coordinator.client.patch_icmp_monitor.assert_awaited_once_with(30, {"enabled": True})
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_turn_off_patches_icmp_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_off()
+
+        coordinator.client.patch_icmp_monitor.assert_awaited_once_with(30, {"enabled": False})
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_no_switch_when_icmp_read_only(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], icmp_read_only=True)
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == 0
+
+    async def test_icmp_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert entities[0].unique_id == "kuvasz_uptime_icmp_30_enabled_switch"

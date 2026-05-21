@@ -7,7 +7,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH
+from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
 from .coordinator import KuvaszCoordinator
 
 
@@ -46,6 +46,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         type_labels = {
             MONITOR_TYPE_HTTP: "HTTP",
             MONITOR_TYPE_PUSH: "Push",
+            MONITOR_TYPE_ICMP: "ICMP",
         }
         type_label = type_labels.get(self._monitor_type, self._monitor_type.upper())
         return DeviceInfo(

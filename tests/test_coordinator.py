@@ -9,6 +9,8 @@ from custom_components.kuvasz_uptime.coordinator import KuvaszCoordinator, Kuvas
 from tests.conftest import (
     HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
+    ICMP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
     PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_STATS_NO_LATENCY,
@@ -21,6 +23,7 @@ def _make_client(
     monitors=None,
     http_stats=None,
     push_stats=None,
+    icmp_stats=None,
     monitors_error=None,
     settings=None,
 ):
@@ -36,21 +39,22 @@ def _make_client(
 
     client.get_http_monitor_stats = AsyncMock(return_value=http_stats or HTTP_MONITOR_STATS)
     client.get_push_monitor_stats = AsyncMock(return_value=push_stats or PUSH_MONITOR_STATS)
+    client.get_icmp_monitor_stats = AsyncMock(return_value=icmp_stats or ICMP_MONITOR_STATS)
     return client
 
 
 class TestCoordinatorFetch:
     async def test_returns_all_monitors(self, hass):
-        monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP]
+        monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP, ICMP_MONITOR_UP]
         client = _make_client(monitors=monitors)
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
 
-        assert len(coordinator.data.monitors) == 2
+        assert len(coordinator.data.monitors) == 3
 
     async def test_stats_keyed_by_type_and_id(self, hass):
-        monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP]
+        monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP, ICMP_MONITOR_UP]
         client = _make_client(monitors=monitors)
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
@@ -58,6 +62,7 @@ class TestCoordinatorFetch:
 
         assert "http_1" in coordinator.data.stats
         assert "push_20" in coordinator.data.stats
+        assert "icmp_30" in coordinator.data.stats
 
     async def test_monitor_stats_helper(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP], http_stats=HTTP_MONITOR_STATS)
@@ -158,3 +163,41 @@ class TestCoordinatorMonitorFiltering:
 
         assert "http_1" in coordinator.data.stats
         assert "push_20" not in coordinator.data.stats
+
+
+class TestIcmpCoordinator:
+    async def test_icmp_stats_fetched(self, hass):
+        client = _make_client(monitors=[ICMP_MONITOR_UP], icmp_stats=ICMP_MONITOR_STATS)
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        stats = coordinator.data.monitor_stats("icmp", 30)
+        assert stats["uptimeHistory"]["uptimeRatio"] == 0.9999
+        assert stats["latencyStats"]["averageLatencyInMs"] == 10
+        assert stats["packetLossStats"]["averagePacketLossPercentage"] == 0
+
+    async def test_icmp_read_only_flag_from_settings(self, hass):
+        from tests.conftest import SETTINGS_RESPONSE_READ_ONLY
+        client = _make_client(monitors=[ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY)
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.data.icmp_read_only is True
+
+    async def test_icmp_not_read_only_by_default(self, hass):
+        client = _make_client(monitors=[ICMP_MONITOR_UP])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.data.icmp_read_only is False
+
+    async def test_is_read_only_icmp(self, hass):
+        client = _make_client(monitors=[])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        await coordinator.async_refresh()
+        coordinator.data.icmp_read_only = True
+
+        assert coordinator.data.is_read_only("icmp") is True

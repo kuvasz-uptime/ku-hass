@@ -22,9 +22,11 @@ STATS_PERIOD_OPTIONS = [
 API_BASE = "/api/v2"
 API_HTTP_MONITORS = f"{API_BASE}/http-monitors"
 API_PUSH_MONITORS = f"{API_BASE}/push-monitors"
+API_ICMP_MONITORS = f"{API_BASE}/icmp-monitors"
 
 MONITOR_TYPE_HTTP = "http"
 MONITOR_TYPE_PUSH = "push"
+MONITOR_TYPE_ICMP = "icmp"
 
 UPTIME_STATUS_UP = "UP"
 

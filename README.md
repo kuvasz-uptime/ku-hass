@@ -11,15 +11,16 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 | Entity | Type | Monitors |
 |---|---|---|
-| Uptime Status | Binary sensor (`connectivity`) | HTTP, Push |
+| Uptime Status | Binary sensor (`connectivity`) | HTTP, Push, ICMP |
 | SSL Status | Binary sensor (`safety`) | HTTP (when SSL check is enabled) |
-| Enabled | Binary sensor | HTTP, Push |
-| Enabled | Switch | HTTP, Push (writable monitors only) |
-| Uptime Ratio | Sensor (`%`) | HTTP, Push |
-| Average Latency in ms | Sensor (`ms`, `duration`) | HTTP |
-| Uptime Status Started At | Sensor (`timestamp`) | HTTP, Push |
-| Last Uptime Check | Sensor (`timestamp`) | HTTP, Push |
-| Next Uptime Check | Sensor (`timestamp`) | HTTP |
+| Enabled | Binary sensor | HTTP, Push, ICMP |
+| Enabled | Switch | HTTP, Push, ICMP (writable monitors only) |
+| Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP |
+| Average Latency in ms | Sensor (`ms`, `duration`) | HTTP; ICMP (when metrics history is enabled) |
+| Average Packet Loss | Sensor (`%`) | ICMP (when metrics history is enabled) |
+| Uptime Status Started At | Sensor (`timestamp`) | HTTP, Push, ICMP |
+| Last Uptime Check | Sensor (`timestamp`) | HTTP, Push, ICMP |
+| Next Uptime Check | Sensor (`timestamp`) | HTTP, ICMP |
 | SSL Status Started At | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | Last SSL Check | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | Next SSL Check | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |

@@ -14,6 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     MONITOR_TYPE_HTTP,
+    MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
     SSL_STATUS_INVALID,
     UPTIME_STATUS_UP,
@@ -86,6 +87,15 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
             attrs.update({
                 "heartbeat_interval": data.get("heartbeatInterval"),
                 "grace_period": data.get("gracePeriod"),
+            })
+        elif self._monitor_type == MONITOR_TYPE_ICMP:
+            attrs.update({
+                "host": data.get("host"),
+                "uptime_check_interval": data.get("uptimeCheckInterval"),
+                "packet_count": data.get("packetCount"),
+                "timeout_seconds": data.get("timeoutSeconds"),
+                "packet_loss_threshold": data.get("packetLossThreshold"),
+                "metrics_history_enabled": data.get("metricsHistoryEnabled"),
             })
         return attrs
 
