@@ -93,6 +93,29 @@ class TestGetMonitors:
             with pytest.raises(KuvaszApiError):
                 await client.get_all_monitors()
 
+    async def test_get_all_monitors_skips_icmp_on_error_when_supported(self, client):
+        """ICMP fetch failure is silently skipped; HTTP/push errors still raise."""
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[HTTP_MONITOR_UP])
+            m.get(f"{BASE_URL}/api/v2/push-monitors", payload=[PUSH_MONITOR_UP])
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors", status=404)
+            result = await client.get_all_monitors(icmp_supported=True)
+
+        types = {m["_type"] for m in result}
+        assert types == {"http", "push"}
+        assert len(result) == 2
+
+    async def test_get_all_monitors_skips_icmp_fetch_when_not_supported(self, client):
+        """When icmp_supported=False the ICMP endpoint is never called."""
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[HTTP_MONITOR_UP])
+            m.get(f"{BASE_URL}/api/v2/push-monitors", payload=[PUSH_MONITOR_UP])
+            result = await client.get_all_monitors(icmp_supported=False)
+
+        types = {m["_type"] for m in result}
+        assert types == {"http", "push"}
+        assert len(result) == 2
+
     async def test_api_key_sent_as_header(self, client):
         with aioresponses() as m:
             m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[])

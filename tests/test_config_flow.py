@@ -5,7 +5,7 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.kuvasz_uptime.const import CONF_SCAN_INTERVAL, CONF_SELECTED_MONITORS, CONF_STATS_PERIOD, DOMAIN, DEFAULT_SCAN_INTERVAL, DEFAULT_STATS_PERIOD
+from custom_components.kuvasz_uptime.const import CONF_SCAN_INTERVAL, CONF_SELECTED_MONITORS, CONF_STATS_PERIOD, CONF_VERIFY_SSL, DOMAIN, DEFAULT_SCAN_INTERVAL, DEFAULT_STATS_PERIOD, DEFAULT_VERIFY_SSL
 from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP, SETTINGS_RESPONSE
 
 CREDENTIALS = {
@@ -259,6 +259,32 @@ class TestConfigFlowScanInterval:
                 await hass.config_entries.flow.async_configure(
                     result["flow_id"], {**CREDENTIALS, "scan_interval": 5}
                 )
+
+
+class TestConfigFlowVerifySSL:
+    async def test_verify_ssl_defaults_to_true(self, hass):
+        result = await _complete_flow(hass)
+        assert result["data"][CONF_VERIFY_SSL] is True
+
+    async def test_verify_ssl_false_stored(self, hass):
+        result = await _complete_flow(
+            hass, credentials={**CREDENTIALS, "verify_ssl": False}
+        )
+        assert result["data"][CONF_VERIFY_SSL] is False
+
+    async def test_verify_ssl_passed_to_client_session(self, hass):
+        with patch("custom_components.kuvasz_uptime.config_flow.async_get_clientsession") as mock_session, \
+             patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+            instance = MockClient.return_value
+            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
+
+            result = await _start_flow(hass)
+            await hass.config_entries.flow.async_configure(
+                result["flow_id"], {**CREDENTIALS, "verify_ssl": False}
+            )
+
+        mock_session.assert_called_once_with(hass, verify_ssl=False)
 
 
 class TestOptionsFlow:

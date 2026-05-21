@@ -150,7 +150,7 @@ ICMP_MONITOR_UP = {
     "metricsHistoryEnabled": True,
     "enabled": True,
     "createdAt": "2024-01-01T00:00:00Z",
-    "updatedAt": None,
+    "updatedAt": "2024-01-02T00:00:00Z",
     "uptimeStatus": "UP",
     "uptimeStatusStartedAt": "2024-01-01T00:00:00Z",
     "lastUptimeCheck": "2024-01-01T01:00:00Z",
@@ -218,6 +218,16 @@ SETTINGS_RESPONSE_READ_ONLY = {
             "areStatusPagesReadOnly": True,
             "arePushMonitorsReadOnly": True,
             "areIcmpMonitorsReadOnly": True,
+        }
+    },
+}
+
+SETTINGS_RESPONSE_NO_ICMP = {
+    "app": {
+        "editabilityState": {
+            "areHttpMonitorsReadOnly": False,
+            "areStatusPagesReadOnly": False,
+            "arePushMonitorsReadOnly": False,
         }
     },
 }

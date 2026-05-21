@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
 
 from .const import (
     API_HTTP_MONITORS,
@@ -97,14 +100,17 @@ class KuvaszClient:
     async def get_icmp_monitor_stats(self, monitor_id: int, period: str) -> dict[str, Any]:
         return await self._get(f"{API_ICMP_MONITORS}/{monitor_id}/stats", params={"period": period})
 
-    async def get_all_monitors(self) -> list[dict[str, Any]]:
+    async def get_all_monitors(self, icmp_supported: bool = True) -> list[dict[str, Any]]:
         """Fetch all monitor types and tag each with its type."""
-        http, push, icmp = await asyncio.gather(
-            self.get_http_monitors(),
-            self.get_push_monitors(),
-            self.get_icmp_monitors(),
-            return_exceptions=True,
-        )
+        coros = [self.get_http_monitors(), self.get_push_monitors()]
+        if icmp_supported:
+            coros.append(self.get_icmp_monitors())
+
+        results = await asyncio.gather(*coros, return_exceptions=True)
+
+        http, push = results[0], results[1]
+        icmp = results[2] if icmp_supported else []
+
         monitors: list[dict[str, Any]] = []
         for result, monitor_type in (
             (http, MONITOR_TYPE_HTTP),
@@ -112,6 +118,9 @@ class KuvaszClient:
             (icmp, MONITOR_TYPE_ICMP),
         ):
             if isinstance(result, Exception):
+                if monitor_type == MONITOR_TYPE_ICMP:
+                    _LOGGER.debug("ICMP monitors not supported on this instance, skipping: %s", result)
+                    continue
                 raise KuvaszApiError(f"Failed to fetch {monitor_type} monitors: {result}") from result
             for m in result:
                 m["_type"] = monitor_type

@@ -11,6 +11,7 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -22,8 +23,10 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_MONITORS,
     CONF_STATS_PERIOD,
+    CONF_VERIFY_SSL,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_STATS_PERIOD,
+    DEFAULT_VERIFY_SSL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
     STATS_PERIOD_OPTIONS,
@@ -36,6 +39,7 @@ STEP_USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_API_KEY): str,
+        vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
         vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
         ),
@@ -98,6 +102,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._host: str = ""
         self._api_key: str = ""
+        self._verify_ssl: bool = DEFAULT_VERIFY_SSL
         self._scan_interval: int = DEFAULT_SCAN_INTERVAL
         self._stats_period: str = DEFAULT_STATS_PERIOD
         self._monitors: list[dict[str, Any]] = []
@@ -115,12 +120,13 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST].rstrip("/")
             api_key = user_input[CONF_API_KEY]
+            verify_ssl = user_input[CONF_VERIFY_SSL]
             scan_interval = user_input[CONF_SCAN_INTERVAL]
 
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured()
 
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
             client = KuvaszClient(host=host, api_key=api_key, session=session)
 
             try:
@@ -129,6 +135,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
             except KuvaszAuthError:
                 errors["base"] = "invalid_auth"
             except KuvaszApiError:
+                _LOGGER.exception("Failed to connect to Kuvasz instance at %s", host)
                 errors["base"] = "cannot_connect"
             except Exception:
                 _LOGGER.exception("Unexpected error during Kuvasz Uptime setup")
@@ -136,6 +143,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 self._host = host
                 self._api_key = api_key
+                self._verify_ssl = verify_ssl
                 self._scan_interval = scan_interval
                 self._stats_period = user_input[CONF_STATS_PERIOD]
                 return await self.async_step_monitors()
@@ -155,6 +163,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
                 data={
                     CONF_HOST: self._host,
                     CONF_API_KEY: self._api_key,
+                    CONF_VERIFY_SSL: self._verify_ssl,
                     CONF_SCAN_INTERVAL: self._scan_interval,
                     CONF_STATS_PERIOD: self._stats_period,
                     CONF_SELECTED_MONITORS: user_input[CONF_SELECTED_MONITORS],
@@ -187,7 +196,8 @@ class KuvaszOptionsFlowHandler(OptionsFlow):
             )
 
         entry = self.config_entry
-        session = async_get_clientsession(self.hass)
+        verify_ssl = entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
+        session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
         client = KuvaszClient(
             host=entry.data[CONF_HOST],
             api_key=entry.data[CONF_API_KEY],

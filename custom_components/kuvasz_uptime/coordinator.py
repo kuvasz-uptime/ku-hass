@@ -69,10 +69,10 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
 
     async def _async_update_data(self) -> KuvaszCoordinatorData:
         try:
-            settings, monitors = await asyncio.gather(
-                self.client.get_settings(),
-                self.client.get_all_monitors(),
-            )
+            settings = await self.client.get_settings()
+            editability = settings.get("app", {}).get("editabilityState", {})
+            icmp_supported = "areIcmpMonitorsReadOnly" in editability
+            monitors = await self.client.get_all_monitors(icmp_supported=icmp_supported)
             if self._selected_monitors is not None:
                 monitors = [
                     m for m in monitors
@@ -82,7 +82,6 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
         except KuvaszApiError as err:
             raise UpdateFailed(f"Error during communication with your Kuvasz instance: {err}") from err
 
-        editability = settings.get("app", {}).get("editabilityState", {})
         return KuvaszCoordinatorData(
             monitors=monitors,
             stats=stats,

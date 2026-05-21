@@ -16,6 +16,7 @@ from tests.conftest import (
     HTTP_MONITOR_STATS_NO_LATENCY,
     PUSH_MONITOR_STATS,
     SETTINGS_RESPONSE,
+    SETTINGS_RESPONSE_NO_ICMP,
 )
 
 
@@ -201,3 +202,23 @@ class TestIcmpCoordinator:
         coordinator.data.icmp_read_only = True
 
         assert coordinator.data.is_read_only("icmp") is True
+
+    async def test_icmp_skipped_when_not_in_settings(self, hass):
+        """Older instances without areIcmpMonitorsReadOnly should not fetch ICMP monitors."""
+        client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP], settings=SETTINGS_RESPONSE_NO_ICMP)
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is True
+        client.get_all_monitors.assert_called_once_with(icmp_supported=False)
+        assert coordinator.data.icmp_read_only is False
+
+    async def test_icmp_fetched_when_in_settings(self, hass):
+        """Instances with areIcmpMonitorsReadOnly should fetch ICMP monitors."""
+        client = _make_client(monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE)
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        client.get_all_monitors.assert_called_once_with(icmp_supported=True)

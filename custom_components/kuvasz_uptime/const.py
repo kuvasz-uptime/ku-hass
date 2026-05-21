@@ -4,6 +4,9 @@ CONF_API_KEY = "api_key"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_SELECTED_MONITORS = "selected_monitors"
 CONF_STATS_PERIOD = "stats_period"
+CONF_VERIFY_SSL = "verify_ssl"
+
+DEFAULT_VERIFY_SSL = True
 
 DEFAULT_SCAN_INTERVAL = 30  # seconds
 MIN_SCAN_INTERVAL = 10

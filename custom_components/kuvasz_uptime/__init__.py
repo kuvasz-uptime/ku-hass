@@ -11,7 +11,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import KuvaszClient
-from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, CONF_SELECTED_MONITORS, CONF_STATS_PERIOD, DEFAULT_SCAN_INTERVAL, DEFAULT_STATS_PERIOD, DOMAIN
+from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, CONF_SELECTED_MONITORS, CONF_STATS_PERIOD, CONF_VERIFY_SSL, DEFAULT_SCAN_INTERVAL, DEFAULT_STATS_PERIOD, DEFAULT_VERIFY_SSL, DOMAIN
 from .coordinator import KuvaszCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ def _entry_value(entry: ConfigEntry, key: str, default=None):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    session = async_get_clientsession(hass)
+    verify_ssl = entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
+    session = async_get_clientsession(hass, verify_ssl=verify_ssl)
     client = KuvaszClient(
         host=entry.data[CONF_HOST],
         api_key=entry.data[CONF_API_KEY],
