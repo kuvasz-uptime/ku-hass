@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import KuvaszApiError, KuvaszClient
-from .const import DEFAULT_STATS_PERIOD, DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH
+from .const import DEFAULT_STATS_PERIOD, DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,12 +24,14 @@ class KuvaszCoordinatorData:
         stats: dict[str, dict[str, Any]],
         http_read_only: bool = False,
         push_read_only: bool = False,
+        icmp_read_only: bool = False,
     ) -> None:
         self.monitors = monitors
         # stats keyed by "{type}_{id}"
         self.stats = stats
         self.http_read_only = http_read_only
         self.push_read_only = push_read_only
+        self.icmp_read_only = icmp_read_only
 
     def monitor_stats(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
         return self.stats.get(f"{monitor_type}_{monitor_id}", {})
@@ -39,6 +41,8 @@ class KuvaszCoordinatorData:
             return self.http_read_only
         if monitor_type == MONITOR_TYPE_PUSH:
             return self.push_read_only
+        if monitor_type == MONITOR_TYPE_ICMP:
+            return self.icmp_read_only
         return True
 
 
@@ -84,6 +88,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             stats=stats,
             http_read_only=editability.get("areHttpMonitorsReadOnly", False),
             push_read_only=editability.get("arePushMonitorsReadOnly", False),
+            icmp_read_only=editability.get("areIcmpMonitorsReadOnly", False),
         )
 
     async def _fetch_stats(self, monitors: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -96,6 +101,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                     data = await self.client.get_http_monitor_stats(monitor_id, self._stats_period)
                 elif monitor_type == MONITOR_TYPE_PUSH:
                     data = await self.client.get_push_monitor_stats(monitor_id, self._stats_period)
+                elif monitor_type == MONITOR_TYPE_ICMP:
+                    data = await self.client.get_icmp_monitor_stats(monitor_id, self._stats_period)
                 else:
                     data = {}
             except KuvaszApiError:

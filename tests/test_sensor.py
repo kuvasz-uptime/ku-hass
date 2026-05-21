@@ -13,6 +13,8 @@ from tests.conftest import (
     HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
+    ICMP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
     PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_STATS_NO_LATENCY,
@@ -20,12 +22,16 @@ from tests.conftest import (
 )
 
 # Entity counts per monitor type (from sensor.py only):
-#   HTTP with SSL:    uptime_pct + avg_response + 7 timestamp sensors = 9
-#   HTTP without SSL: uptime_pct + avg_response + 3 timestamp sensors = 5
-#   Push:             uptime_pct + 4 timestamp sensors               = 5
+#   HTTP with SSL:             uptime_pct + avg_response + 7 timestamp sensors = 9
+#   HTTP without SSL:          uptime_pct + avg_response + 3 timestamp sensors = 5
+#   Push:                      uptime_pct + 4 timestamp sensors               = 5
+#   ICMP (metrics enabled):    uptime_pct + avg_response + avg_pkt_loss + 3 timestamp sensors = 6
+#   ICMP (metrics disabled):   uptime_pct + 3 timestamp sensors               = 4
 HTTP_SSL_SENSOR_COUNT = 9
 HTTP_NO_SSL_SENSOR_COUNT = 5
 PUSH_SENSOR_COUNT = 5
+ICMP_METRICS_SENSOR_COUNT = 6
+ICMP_NO_METRICS_SENSOR_COUNT = 4
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
@@ -267,8 +273,88 @@ class TestSensorEntityCount:
 
     async def test_sensor_unique_ids_are_unique_across_all_monitors(self, hass):
         coordinator = _make_coordinator(
-            hass, [HTTP_MONITOR_UP, HTTP_MONITOR_DOWN, PUSH_MONITOR_UP]
+            hass, [HTTP_MONITOR_UP, HTTP_MONITOR_DOWN, PUSH_MONITOR_UP, ICMP_MONITOR_UP]
         )
         entities = await _setup_integration(hass, coordinator)
         ids = [e.unique_id for e in entities]
         assert len(ids) == len(set(ids))
+
+    async def test_icmp_monitor_with_metrics_sensor_count(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == ICMP_METRICS_SENSOR_COUNT
+
+    async def test_icmp_monitor_without_metrics_sensor_count(self, hass):
+        monitor = {**ICMP_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == ICMP_NO_METRICS_SENSOR_COUNT
+
+
+class TestIcmpSensors:
+    async def test_icmp_uptime_percentage(self, hass):
+        stats = {"icmp_30": ICMP_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.native_value == pytest.approx(99.99, abs=0.001)
+
+    async def test_icmp_avg_latency_sensor(self, hass):
+        stats = {"icmp_30": ICMP_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.native_value == 10
+
+    async def test_icmp_avg_latency_not_created_when_metrics_disabled(self, hass):
+        monitor = {**ICMP_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        rt_sensors = [e for e in entities if "average_latency_in_ms" in e.unique_id]
+        assert len(rt_sensors) == 0
+
+    async def test_icmp_avg_packet_loss_sensor(self, hass):
+        stats = {"icmp_30": ICMP_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
+        assert pkt.native_value == 0
+
+    async def test_icmp_avg_packet_loss_not_created_when_metrics_disabled(self, hass):
+        monitor = {**ICMP_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt_sensors = [e for e in entities if "average_packet_loss" in e.unique_id]
+        assert len(pkt_sensors) == 0
+
+    async def test_icmp_avg_packet_loss_none_when_no_stats(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], stats_map={})
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
+        assert pkt.native_value is None
+
+    async def test_icmp_timestamp_sensors_created(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ts_ids = {e.unique_id for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP}
+        assert any("uptime_status_started_at" in uid for uid in ts_ids)
+        assert any("last_uptime_check" in uid for uid in ts_ids)
+        assert any("next_uptime_check" in uid for uid in ts_ids)
+        assert len(ts_ids) == 3
+
+    async def test_icmp_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.unique_id == "kuvasz_uptime_icmp_30_uptime_ratio"
+
+        pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
+        assert pkt.unique_id == "kuvasz_uptime_icmp_30_average_packet_loss"

@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH
+from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
 from .coordinator import KuvaszCoordinator
 from .entity import KuvaszMonitorEntity
 
@@ -55,4 +55,6 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
             await client.patch_http_monitor(self._monitor_id, {"enabled": enabled})
         elif self._monitor_type == MONITOR_TYPE_PUSH:
             await client.patch_push_monitor(self._monitor_id, {"enabled": enabled})
+        elif self._monitor_type == MONITOR_TYPE_ICMP:
+            await client.patch_icmp_monitor(self._monitor_id, {"enabled": enabled})
         await self.coordinator.async_request_refresh()

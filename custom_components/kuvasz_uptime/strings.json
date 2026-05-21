@@ -62,6 +62,9 @@
       "average_latency_in_ms": {
         "name": "Average Latency in ms"
       },
+      "average_packet_loss": {
+        "name": "Average Packet Loss"
+      },
       "uptime_status_started_at": {
         "name": "Uptime Status Started At"
       },

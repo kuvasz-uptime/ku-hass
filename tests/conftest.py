@@ -138,6 +138,66 @@ PUSH_MONITOR_STATS = {
     },
 }
 
+ICMP_MONITOR_UP = {
+    "id": 30,
+    "name": "My Server",
+    "host": "192.168.1.1",
+    "uptimeCheckInterval": 60,
+    "packetCount": 3,
+    "timeoutSeconds": 5,
+    "packetLossThreshold": 100,
+    "failureCountThreshold": 1,
+    "metricsHistoryEnabled": True,
+    "enabled": True,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": None,
+    "uptimeStatus": "UP",
+    "uptimeStatusStartedAt": "2024-01-01T00:00:00Z",
+    "lastUptimeCheck": "2024-01-01T01:00:00Z",
+    "nextUptimeCheck": "2024-01-01T01:01:00Z",
+    "uptimeError": None,
+    "integrations": [],
+    "effectiveIntegrations": [],
+    "statusPages": [],
+    "_type": "icmp",
+}
+
+ICMP_MONITOR_DOWN = {
+    **ICMP_MONITOR_UP,
+    "id": 31,
+    "name": "Down Server",
+    "uptimeStatus": "DOWN",
+}
+
+ICMP_MONITOR_STATS = {
+    "id": 30,
+    "metricsHistoryEnabled": True,
+    "uptimeHistory": {
+        "period": "PT24H",
+        "incidents": 0,
+        "affectedMonitors": 0,
+        "uptimeRatio": 0.9999,
+        "totalDowntimeSeconds": 5,
+    },
+    "latencyStats": {
+        "averageLatencyInMs": 10,
+        "minLatencyInMs": 5,
+        "maxLatencyInMs": 20,
+        "p90LatencyInMs": 18,
+        "p95LatencyInMs": 19,
+        "p99LatencyInMs": 20,
+    },
+    "packetLossStats": {
+        "averagePacketLossPercentage": 0,
+        "minPacketLossPercentage": 0,
+        "maxPacketLossPercentage": 0,
+        "p90PacketLossPercentage": 0,
+        "p95PacketLossPercentage": 0,
+        "p99PacketLossPercentage": 0,
+    },
+    "metricsLogs": [],
+}
+
 SETTINGS_RESPONSE = {
     "versionInfo": {"version": "2.1.0", "buildTime": "2024-01-01T00:00:00Z"},
     "app": {
@@ -145,6 +205,7 @@ SETTINGS_RESPONSE = {
             "areHttpMonitorsReadOnly": False,
             "areStatusPagesReadOnly": False,
             "arePushMonitorsReadOnly": False,
+            "areIcmpMonitorsReadOnly": False,
         }
     },
 }
@@ -156,6 +217,7 @@ SETTINGS_RESPONSE_READ_ONLY = {
             "areHttpMonitorsReadOnly": True,
             "areStatusPagesReadOnly": True,
             "arePushMonitorsReadOnly": True,
+            "areIcmpMonitorsReadOnly": True,
         }
     },
 }

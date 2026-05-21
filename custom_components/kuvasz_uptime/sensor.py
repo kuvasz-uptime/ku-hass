@@ -15,7 +15,7 @@ from homeassistant.const import PERCENTAGE, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH
+from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
 from .coordinator import KuvaszCoordinator
 from .entity import KuvaszMonitorEntity
 
@@ -34,19 +34,19 @@ TIMESTAMP_SENSOR_DESCRIPTIONS: tuple[KuvaszTimestampSensorDescription, ...] = (
         key="uptime_status_started_at",
         translation_key="uptime_status_started_at",
         monitor_data_key="uptimeStatusStartedAt",
-        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH),
+        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH, MONITOR_TYPE_ICMP),
     ),
     KuvaszTimestampSensorDescription(
         key="last_uptime_check",
         translation_key="last_uptime_check",
         monitor_data_key="lastUptimeCheck",
-        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH),
+        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH, MONITOR_TYPE_ICMP),
     ),
     KuvaszTimestampSensorDescription(
         key="next_uptime_check",
         translation_key="next_uptime_check",
         monitor_data_key="nextUptimeCheck",
-        applicable_types=(MONITOR_TYPE_HTTP,),
+        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP),
     ),
     KuvaszTimestampSensorDescription(
         key="ssl_status_started_at",
@@ -104,6 +104,9 @@ async def async_setup_entry(
         entities.append(KuvaszUptimePercentageSensor(coordinator, monitor))
         if monitor_type == MONITOR_TYPE_HTTP and monitor.get("latencyHistoryEnabled"):
             entities.append(KuvaszAvgResponseTimeSensor(coordinator, monitor))
+        if monitor_type == MONITOR_TYPE_ICMP and monitor.get("metricsHistoryEnabled"):
+            entities.append(KuvaszAvgResponseTimeSensor(coordinator, monitor))
+            entities.append(KuvaszAvgPacketLossSensor(coordinator, monitor))
         for desc in TIMESTAMP_SENSOR_DESCRIPTIONS:
             if monitor_type not in desc.applicable_types:
                 continue
@@ -155,6 +158,27 @@ class KuvaszAvgResponseTimeSensor(KuvaszMonitorEntity, SensorEntity):
         if latency_stats is None:
             return None
         return latency_stats.get("averageLatencyInMs")
+
+
+class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
+    """Sensor reporting average packet loss percentage for ICMP monitors."""
+
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "average_packet_loss"
+
+    def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        super().__init__(coordinator, monitor)
+        self._attr_unique_id = f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_packet_loss"
+        self.entity_id = self._build_entity_id("sensor", "average_packet_loss")
+
+    @property
+    def native_value(self) -> float | None:
+        packet_loss_stats = self._monitor_stats.get("packetLossStats")
+        if packet_loss_stats is None:
+            return None
+        return packet_loss_stats.get("averagePacketLossPercentage")
 
 
 class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):

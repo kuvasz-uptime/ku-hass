@@ -7,6 +7,8 @@ from custom_components.kuvasz_uptime.api import KuvaszClient, KuvaszApiError, Ku
 from tests.conftest import (
     HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
+    ICMP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
     PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
     PUSH_MONITOR_STATS,
@@ -65,20 +67,29 @@ class TestGetMonitors:
         assert len(result) == 1
         assert result[0]["name"] == "My Cron Job"
 
+    async def test_get_icmp_monitors(self, client):
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors", payload=[ICMP_MONITOR_UP])
+            result = await client.get_icmp_monitors()
+        assert len(result) == 1
+        assert result[0]["name"] == "My Server"
+
     async def test_get_all_monitors_tags_type(self, client):
         with aioresponses() as m:
             m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[HTTP_MONITOR_UP])
             m.get(f"{BASE_URL}/api/v2/push-monitors", payload=[PUSH_MONITOR_UP])
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors", payload=[ICMP_MONITOR_UP])
             result = await client.get_all_monitors()
 
         types = {m["_type"] for m in result}
-        assert types == {"http", "push"}
-        assert len(result) == 2
+        assert types == {"http", "push", "icmp"}
+        assert len(result) == 3
 
     async def test_get_all_monitors_raises_if_any_request_fails(self, client):
         with aioresponses() as m:
             m.get(f"{BASE_URL}/api/v2/http-monitors", status=500)
             m.get(f"{BASE_URL}/api/v2/push-monitors", payload=[])
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors", payload=[])
             with pytest.raises(KuvaszApiError):
                 await client.get_all_monitors()
 
@@ -88,6 +99,12 @@ class TestGetMonitors:
             await client.get_http_monitors()
             request = list(m.requests.values())[0][0]
         assert request.kwargs["headers"]["X-API-KEY"] == API_KEY
+
+    async def test_get_icmp_monitors_raises_if_request_fails(self, client):
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors", status=500)
+            with pytest.raises(KuvaszApiError):
+                await client.get_icmp_monitors()
 
 
 class TestGetStats:
@@ -109,6 +126,14 @@ class TestGetStats:
             m.get(f"{BASE_URL}/api/v2/push-monitors/20/stats?period=P1D", payload=PUSH_MONITOR_STATS)
             result = await client.get_push_monitor_stats(20, "P1D")
         assert result["uptimeHistory"]["uptimeRatio"] is None
+
+    async def test_get_icmp_monitor_stats(self, client):
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/icmp-monitors/30/stats?period=P1D", payload=ICMP_MONITOR_STATS)
+            result = await client.get_icmp_monitor_stats(30, "P1D")
+        assert result["uptimeHistory"]["uptimeRatio"] == 0.9999
+        assert result["latencyStats"]["averageLatencyInMs"] == 10
+        assert result["packetLossStats"]["averagePacketLossPercentage"] == 0
 
     async def test_trailing_slash_stripped_from_host(self):
         async with aiohttp.ClientSession() as session:
