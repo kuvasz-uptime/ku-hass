@@ -1,46 +1,44 @@
 """Tests for the Kuvasz DataUpdateCoordinator."""
+
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-from homeassistant.helpers.update_coordinator import UpdateFailed
-
 from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszClient
-from custom_components.kuvasz_uptime.coordinator import KuvaszCoordinator, KuvaszCoordinatorData
+from custom_components.kuvasz_uptime.coordinator import (
+    KuvaszCoordinator,
+)
 from tests.conftest import (
-    HTTP_MONITOR_UP,
-    HTTP_MONITOR_DOWN,
-    ICMP_MONITOR_UP,
-    ICMP_MONITOR_STATS,
-    PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
-    HTTP_MONITOR_STATS_NO_LATENCY,
+    HTTP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
+    ICMP_MONITOR_UP,
     PUSH_MONITOR_STATS,
+    PUSH_MONITOR_UP,
     SETTINGS_RESPONSE,
     SETTINGS_RESPONSE_NO_ICMP,
 )
 
 
-def _make_client(
-    monitors=None,
-    http_stats=None,
-    push_stats=None,
-    icmp_stats=None,
-    monitors_error=None,
-    settings=None,
-):
+def _make_client(monitors=None, stats=None, monitors_error=None, settings=None):
+    stats = stats or {}
     client = MagicMock(spec=KuvaszClient)
     client.get_settings = AsyncMock(return_value=settings or SETTINGS_RESPONSE)
     if monitors_error:
         client.get_all_monitors = AsyncMock(side_effect=monitors_error)
     else:
         tagged = []
-        for m in (monitors or []):
+        for m in monitors or []:
             tagged.append(m)
         client.get_all_monitors = AsyncMock(return_value=tagged)
 
-    client.get_http_monitor_stats = AsyncMock(return_value=http_stats or HTTP_MONITOR_STATS)
-    client.get_push_monitor_stats = AsyncMock(return_value=push_stats or PUSH_MONITOR_STATS)
-    client.get_icmp_monitor_stats = AsyncMock(return_value=icmp_stats or ICMP_MONITOR_STATS)
+    client.get_http_monitor_stats = AsyncMock(
+        return_value=stats.get("http", HTTP_MONITOR_STATS)
+    )
+    client.get_push_monitor_stats = AsyncMock(
+        return_value=stats.get("push", PUSH_MONITOR_STATS)
+    )
+    client.get_icmp_monitor_stats = AsyncMock(
+        return_value=stats.get("icmp", ICMP_MONITOR_STATS)
+    )
     return client
 
 
@@ -66,7 +64,9 @@ class TestCoordinatorFetch:
         assert "icmp_30" in coordinator.data.stats
 
     async def test_monitor_stats_helper(self, hass):
-        client = _make_client(monitors=[HTTP_MONITOR_UP], http_stats=HTTP_MONITOR_STATS)
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP], stats={"http": HTTP_MONITOR_STATS}
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
@@ -85,7 +85,9 @@ class TestCoordinatorFetch:
     async def test_stats_fetch_failure_does_not_crash_coordinator(self, hass):
         """A stats fetch error for one monitor should not abort the whole update."""
         client = _make_client(monitors=[HTTP_MONITOR_UP])
-        client.get_http_monitor_stats = AsyncMock(side_effect=KuvaszApiError("stats unavailable"))
+        client.get_http_monitor_stats = AsyncMock(
+            side_effect=KuvaszApiError("stats unavailable")
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
@@ -168,7 +170,9 @@ class TestCoordinatorMonitorFiltering:
 
 class TestIcmpCoordinator:
     async def test_icmp_stats_fetched(self, hass):
-        client = _make_client(monitors=[ICMP_MONITOR_UP], icmp_stats=ICMP_MONITOR_STATS)
+        client = _make_client(
+            monitors=[ICMP_MONITOR_UP], stats={"icmp": ICMP_MONITOR_STATS}
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
@@ -180,7 +184,10 @@ class TestIcmpCoordinator:
 
     async def test_icmp_read_only_flag_from_settings(self, hass):
         from tests.conftest import SETTINGS_RESPONSE_READ_ONLY
-        client = _make_client(monitors=[ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY)
+
+        client = _make_client(
+            monitors=[ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
@@ -204,8 +211,11 @@ class TestIcmpCoordinator:
         assert coordinator.data.is_read_only("icmp") is True
 
     async def test_icmp_skipped_when_not_in_settings(self, hass):
-        """Older instances without areIcmpMonitorsReadOnly should not fetch ICMP monitors."""
-        client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP], settings=SETTINGS_RESPONSE_NO_ICMP)
+        """Older instances without areIcmpMonitorsReadOnly skip ICMP monitors."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP],
+            settings=SETTINGS_RESPONSE_NO_ICMP,
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()
@@ -216,7 +226,9 @@ class TestIcmpCoordinator:
 
     async def test_icmp_fetched_when_in_settings(self, hass):
         """Instances with areIcmpMonitorsReadOnly should fetch ICMP monitors."""
-        client = _make_client(monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE)
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE
+        )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
         await coordinator.async_refresh()

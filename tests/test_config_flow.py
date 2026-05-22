@@ -1,12 +1,20 @@
 """Tests for the Kuvasz config flow."""
-from unittest.mock import AsyncMock, MagicMock, patch
+
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.kuvasz_uptime.const import CONF_SCAN_INTERVAL, CONF_SELECTED_MONITORS, CONF_STATS_PERIOD, CONF_VERIFY_SSL, DOMAIN, DEFAULT_SCAN_INTERVAL, DEFAULT_STATS_PERIOD, DEFAULT_VERIFY_SSL
-from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP, SETTINGS_RESPONSE
+from custom_components.kuvasz_uptime.const import (
+    CONF_SCAN_INTERVAL,
+    CONF_SELECTED_MONITORS,
+    CONF_STATS_PERIOD,
+    CONF_VERIFY_SSL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+)
+from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
 
 CREDENTIALS = {
     "host": "http://kuvasz.local:8080",
@@ -25,14 +33,19 @@ async def _start_flow(hass):
     )
 
 
-
 async def _complete_flow(hass, credentials=None, selected=None, monitors=None):
     """Run both steps of the config flow and return the final result."""
     credentials = credentials or CREDENTIALS
     monitors = monitors if monitors is not None else ALL_MONITORS
-    selected = selected if selected is not None else [f"{m['_type']}_{m['id']}" for m in monitors]
+    selected = (
+        selected
+        if selected is not None
+        else [f"{m['_type']}_{m['id']}" for m in monitors]
+    )
 
-    with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+    with patch(
+        "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+    ) as MockClient:
         instance = MockClient.return_value
         instance.verify_connection = AsyncMock(return_value=True)
         instance.get_all_monitors = AsyncMock(return_value=monitors)
@@ -44,11 +57,9 @@ async def _complete_flow(hass, credentials=None, selected=None, monitors=None):
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "monitors"
 
-        result = await hass.config_entries.flow.async_configure(
+        return await hass.config_entries.flow.async_configure(
             result["flow_id"], {"selected_monitors": selected}
         )
-
-    return result
 
 
 class TestConfigFlowStep1:
@@ -58,7 +69,9 @@ class TestConfigFlowStep1:
         assert result["step_id"] == "user"
 
     async def test_valid_credentials_advance_to_monitor_step(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -74,9 +87,13 @@ class TestConfigFlowStep1:
     async def test_shows_invalid_auth_error(self, hass):
         from custom_components.kuvasz_uptime.api import KuvaszAuthError
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(side_effect=KuvaszAuthError("bad key"))
+            instance.verify_connection = AsyncMock(
+                side_effect=KuvaszAuthError("bad key")
+            )
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -91,9 +108,13 @@ class TestConfigFlowStep1:
     async def test_shows_cannot_connect_error(self, hass):
         from custom_components.kuvasz_uptime.api import KuvaszApiError
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(side_effect=KuvaszApiError("timeout"))
+            instance.verify_connection = AsyncMock(
+                side_effect=KuvaszApiError("timeout")
+            )
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -105,7 +126,9 @@ class TestConfigFlowStep1:
         assert result["errors"]["base"] == "cannot_connect"
 
     async def test_shows_unknown_error(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(side_effect=Exception("unexpected"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -121,7 +144,9 @@ class TestConfigFlowStep1:
     async def test_can_retry_after_error(self, hass):
         from custom_components.kuvasz_uptime.api import KuvaszApiError
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(side_effect=KuvaszApiError("down"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -133,7 +158,9 @@ class TestConfigFlowStep1:
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -147,7 +174,9 @@ class TestConfigFlowStep1:
 
 class TestConfigFlowStep2:
     async def test_all_monitors_selected_by_default(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -191,7 +220,9 @@ class TestConfigFlowStep2:
     async def test_aborts_if_already_configured(self, hass):
         await _complete_flow(hass)
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -205,7 +236,9 @@ class TestConfigFlowStep2:
         assert result["reason"] == "already_configured"
 
     async def test_monitor_options_include_type_label(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -215,13 +248,15 @@ class TestConfigFlowStep2:
                 result["flow_id"], CREDENTIALS
             )
 
-        selector_config = list(result["data_schema"].schema.values())[0].config
+        selector_config = next(iter(result["data_schema"].schema.values())).config
         option_labels = [o["label"] for o in selector_config["options"]]
         assert any("HTTP" in label for label in option_labels)
         assert any("PUSH" in label for label in option_labels)
 
     async def test_empty_monitor_list_shows_form(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=[])
@@ -249,13 +284,15 @@ class TestConfigFlowScanInterval:
         assert result["data"]["scan_interval"] == 120
 
     async def test_scan_interval_below_minimum_rejected(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017
                 await hass.config_entries.flow.async_configure(
                     result["flow_id"], {**CREDENTIALS, "scan_interval": 5}
                 )
@@ -273,8 +310,14 @@ class TestConfigFlowVerifySSL:
         assert result["data"][CONF_VERIFY_SSL] is False
 
     async def test_verify_ssl_passed_to_client_session(self, hass):
-        with patch("custom_components.kuvasz_uptime.config_flow.async_get_clientsession") as mock_session, \
-             patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with (
+            patch(
+                "custom_components.kuvasz_uptime.config_flow.async_get_clientsession"
+            ) as mock_session,
+            patch(
+                "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+            ) as MockClient,
+        ):
             instance = MockClient.return_value
             instance.verify_connection = AsyncMock(return_value=True)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
@@ -297,11 +340,12 @@ class TestOptionsFlow:
 
     async def _start_options_flow(self, hass, entry, monitors=None):
         monitors = monitors if monitors is not None else ALL_MONITORS
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.get_all_monitors = AsyncMock(return_value=monitors)
-            result = await hass.config_entries.options.async_init(entry.entry_id)
-        return result
+            return await hass.config_entries.options.async_init(entry.entry_id)
 
     async def test_options_flow_shows_init_form(self, hass):
         entry = await self._setup_entry(hass)
@@ -329,7 +373,9 @@ class TestOptionsFlow:
     async def test_options_flow_saves_to_entry_options(self, hass):
         entry = await self._setup_entry(hass)
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -352,7 +398,9 @@ class TestOptionsFlow:
 
         entry = await self._setup_entry(hass)
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.get_all_monitors = AsyncMock(side_effect=KuvaszApiError("down"))
             result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -382,7 +430,9 @@ class TestOptionsFlow:
     async def test_options_flow_can_change_stats_period(self, hass):
         entry = await self._setup_entry(hass)
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -401,7 +451,9 @@ class TestOptionsFlow:
     async def test_options_flow_can_change_selected_monitors(self, hass):
         entry = await self._setup_entry(hass, selected=ALL_MONITOR_KEYS)
 
-        with patch("custom_components.kuvasz_uptime.config_flow.KuvaszClient") as MockClient:
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
             instance = MockClient.return_value
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)

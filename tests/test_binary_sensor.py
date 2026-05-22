@@ -1,22 +1,22 @@
 """Tests for Kuvasz binary sensors."""
+
 from unittest.mock import MagicMock
 
-import pytest
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
-from custom_components.kuvasz_uptime.coordinator import KuvaszCoordinator, KuvaszCoordinatorData
+from custom_components.kuvasz_uptime.coordinator import (
+    KuvaszCoordinator,
+    KuvaszCoordinatorData,
+)
 from tests.conftest import (
-    HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
-    ICMP_MONITOR_UP,
+    HTTP_MONITOR_UP,
     ICMP_MONITOR_DOWN,
+    ICMP_MONITOR_UP,
     PUSH_MONITOR_UP,
-    HTTP_MONITOR_STATS,
-    HTTP_MONITOR_STATS_NO_LATENCY,
-    PUSH_MONITOR_STATS,
 )
 
 
@@ -35,13 +35,18 @@ async def _setup_integration(hass, coordinator):
     hass.data[DOMAIN]["test_entry"] = coordinator
 
     from homeassistant.config_entries import ConfigEntry
+
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
     entry.domain = DOMAIN
 
     from custom_components.kuvasz_uptime.binary_sensor import async_setup_entry
+
     entities = []
-    async_add = lambda ents: entities.extend(ents)
+
+    def async_add(ents):
+        return entities.extend(ents)
+
     await async_setup_entry(hass, entry, async_add)
     return entities
 

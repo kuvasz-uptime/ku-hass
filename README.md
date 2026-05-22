@@ -16,7 +16,7 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | Enabled | Binary sensor | HTTP, Push, ICMP |
 | Enabled | Switch | HTTP, Push, ICMP (writable monitors only) |
 | Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP |
-| Average Latency in ms | Sensor (`ms`, `duration`) | HTTP; ICMP (when metrics history is enabled) |
+| Average Latency | Sensor (`ms`, `duration`) | HTTP; ICMP (when metrics history is enabled) |
 | Average Packet Loss | Sensor (`%`) | ICMP (when metrics history is enabled) |
 | Uptime Status Started At | Sensor (`timestamp`) | HTTP, Push, ICMP |
 | Last Uptime Check | Sensor (`timestamp`) | HTTP, Push, ICMP |

@@ -1,17 +1,22 @@
 """Tests for the Kuvasz API client."""
+
+import aiohttp
 import pytest
 from aioresponses import aioresponses
-import aiohttp
 
-from custom_components.kuvasz_uptime.api import KuvaszClient, KuvaszApiError, KuvaszAuthError
+from custom_components.kuvasz_uptime.api import (
+    KuvaszApiError,
+    KuvaszAuthError,
+    KuvaszClient,
+)
 from tests.conftest import (
-    HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
-    ICMP_MONITOR_UP,
-    ICMP_MONITOR_STATS,
-    PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
+    HTTP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
+    ICMP_MONITOR_UP,
     PUSH_MONITOR_STATS,
+    PUSH_MONITOR_UP,
     SETTINGS_RESPONSE,
 )
 
@@ -46,7 +51,10 @@ class TestVerifyConnection:
 
     async def test_raises_api_error_on_connection_failure(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/settings", exception=aiohttp.ClientConnectionError())
+            m.get(
+                f"{BASE_URL}/api/v2/settings",
+                exception=aiohttp.ClientConnectionError(),
+            )
             with pytest.raises(KuvaszApiError):
                 await client.verify_connection()
 
@@ -54,7 +62,10 @@ class TestVerifyConnection:
 class TestGetMonitors:
     async def test_get_http_monitors(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[HTTP_MONITOR_UP, HTTP_MONITOR_DOWN])
+            m.get(
+                f"{BASE_URL}/api/v2/http-monitors",
+                payload=[HTTP_MONITOR_UP, HTTP_MONITOR_DOWN],
+            )
             result = await client.get_http_monitors()
         assert len(result) == 2
         assert result[0]["id"] == 1
@@ -120,7 +131,7 @@ class TestGetMonitors:
         with aioresponses() as m:
             m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[])
             await client.get_http_monitors()
-            request = list(m.requests.values())[0][0]
+            request = next(iter(m.requests.values()))[0]
         assert request.kwargs["headers"]["X-API-KEY"] == API_KEY
 
     async def test_get_icmp_monitors_raises_if_request_fails(self, client):
@@ -133,26 +144,38 @@ class TestGetMonitors:
 class TestGetStats:
     async def test_get_http_monitor_stats(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/http-monitors/1/stats?period=P1D", payload=HTTP_MONITOR_STATS)
+            m.get(
+                f"{BASE_URL}/api/v2/http-monitors/1/stats?period=P1D",
+                payload=HTTP_MONITOR_STATS,
+            )
             result = await client.get_http_monitor_stats(1, "P1D")
         assert result["uptimeHistory"]["uptimeRatio"] == 0.9987
         assert result["latencyStats"]["averageLatencyInMs"] == 123
 
     async def test_get_http_monitor_stats_custom_period(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/http-monitors/1/stats?period=P7D", payload=HTTP_MONITOR_STATS)
+            m.get(
+                f"{BASE_URL}/api/v2/http-monitors/1/stats?period=P7D",
+                payload=HTTP_MONITOR_STATS,
+            )
             result = await client.get_http_monitor_stats(1, "P7D")
         assert result["uptimeHistory"]["uptimeRatio"] == 0.9987
 
     async def test_get_push_monitor_stats(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/push-monitors/20/stats?period=P1D", payload=PUSH_MONITOR_STATS)
+            m.get(
+                f"{BASE_URL}/api/v2/push-monitors/20/stats?period=P1D",
+                payload=PUSH_MONITOR_STATS,
+            )
             result = await client.get_push_monitor_stats(20, "P1D")
         assert result["uptimeHistory"]["uptimeRatio"] is None
 
     async def test_get_icmp_monitor_stats(self, client):
         with aioresponses() as m:
-            m.get(f"{BASE_URL}/api/v2/icmp-monitors/30/stats?period=P1D", payload=ICMP_MONITOR_STATS)
+            m.get(
+                f"{BASE_URL}/api/v2/icmp-monitors/30/stats?period=P1D",
+                payload=ICMP_MONITOR_STATS,
+            )
             result = await client.get_icmp_monitor_stats(30, "P1D")
         assert result["uptimeHistory"]["uptimeRatio"] == 0.9999
         assert result["latencyStats"]["averageLatencyInMs"] == 10

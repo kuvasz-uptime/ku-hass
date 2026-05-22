@@ -1,5 +1,6 @@
 """Tests for Kuvasz sensors."""
-from datetime import datetime, timezone
+
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,24 +9,27 @@ from homeassistant.const import PERCENTAGE
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
-from custom_components.kuvasz_uptime.coordinator import KuvaszCoordinator, KuvaszCoordinatorData
+from custom_components.kuvasz_uptime.coordinator import (
+    KuvaszCoordinator,
+    KuvaszCoordinatorData,
+)
 from tests.conftest import (
-    HTTP_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
-    ICMP_MONITOR_UP,
-    ICMP_MONITOR_STATS,
-    PUSH_MONITOR_UP,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_STATS_NO_LATENCY,
+    HTTP_MONITOR_UP,
+    ICMP_MONITOR_STATS,
+    ICMP_MONITOR_UP,
     PUSH_MONITOR_STATS,
+    PUSH_MONITOR_UP,
 )
 
 # Entity counts per monitor type (from sensor.py only):
 #   HTTP with SSL:             uptime_pct + avg_response + 7 timestamp sensors = 9
 #   HTTP without SSL:          uptime_pct + avg_response + 3 timestamp sensors = 5
 #   Push:                      uptime_pct + 4 timestamp sensors               = 5
-#   ICMP (metrics enabled):    uptime_pct + avg_response + avg_pkt_loss + 3 timestamp sensors = 6
+#   ICMP (metrics on):    uptime_pct + avg_response + avg_pkt_loss + 3 timestamps = 6
 #   ICMP (metrics disabled):   uptime_pct + 3 timestamp sensors               = 4
 HTTP_SSL_SENSOR_COUNT = 9
 HTTP_NO_SSL_SENSOR_COUNT = 5
@@ -49,13 +53,18 @@ async def _setup_integration(hass, coordinator):
     hass.data[DOMAIN]["test_entry"] = coordinator
 
     from homeassistant.config_entries import ConfigEntry
+
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
     entry.domain = DOMAIN
 
     from custom_components.kuvasz_uptime.sensor import async_setup_entry
+
     entities = []
-    async_add = lambda ents: entities.extend(ents)
+
+    def async_add(ents):
+        return entities.extend(ents)
+
     await async_setup_entry(hass, entry, async_add)
     return entities
 
@@ -183,18 +192,31 @@ class TestTimestampSensors:
         entities = await _setup_integration(hass, coordinator)
 
         expected_keys = {
-            "uptime_status_started_at", "last_uptime_check", "next_uptime_check",
-            "ssl_status_started_at", "last_ssl_check", "next_ssl_check", "ssl_valid_until",
+            "uptime_status_started_at",
+            "last_uptime_check",
+            "next_uptime_check",
+            "ssl_status_started_at",
+            "last_ssl_check",
+            "next_ssl_check",
+            "ssl_valid_until",
         }
-        ts_ids = {e.unique_id for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP}
-        assert all(f"http_1_{k}" in uid for k in expected_keys for uid in ts_ids if k in uid)
+        ts_ids = {
+            e.unique_id
+            for e in entities
+            if e.device_class == SensorDeviceClass.TIMESTAMP
+        }
+        assert all(
+            f"http_1_{k}" in uid for k in expected_keys for uid in ts_ids if k in uid
+        )
         assert len(ts_ids) == 7
 
     async def test_http_monitor_no_ssl_skips_ssl_timestamp_sensors(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_NO_SSL])
         entities = await _setup_integration(hass, coordinator)
 
-        ts_entities = [e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP]
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
         ts_keys = [e.unique_id for e in ts_entities]
         assert len(ts_entities) == 3
         assert not any("ssl" in uid for uid in ts_keys)
@@ -203,7 +225,9 @@ class TestTimestampSensors:
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
-        ts_entities = [e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP]
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
         ts_keys = [e.unique_id for e in ts_entities]
         assert len(ts_entities) == 4
         assert any("last_heartbeat" in uid for uid in ts_keys)
@@ -343,7 +367,11 @@ class TestIcmpSensors:
         coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
-        ts_ids = {e.unique_id for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP}
+        ts_ids = {
+            e.unique_id
+            for e in entities
+            if e.device_class == SensorDeviceClass.TIMESTAMP
+        }
         assert any("uptime_status_started_at" in uid for uid in ts_ids)
         assert any("last_uptime_check" in uid for uid in ts_ids)
         assert any("next_uptime_check" in uid for uid in ts_ids)

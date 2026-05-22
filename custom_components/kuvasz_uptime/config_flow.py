@@ -1,12 +1,17 @@
 """Config flow for Kuvasz Uptime integration."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
 import voluptuous as vol
-
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -17,7 +22,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .api import KuvaszAuthError, KuvaszClient, KuvaszApiError
+from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
 from .const import (
     CONF_API_KEY,
     CONF_SCAN_INTERVAL,
@@ -27,10 +32,10 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_STATS_PERIOD,
     DEFAULT_VERIFY_SSL,
-    MIN_SCAN_INTERVAL,
-    MAX_SCAN_INTERVAL,
-    STATS_PERIOD_OPTIONS,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+    STATS_PERIOD_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,16 +82,19 @@ def _build_monitors_schema(
 
     fields: dict[vol.Marker, Any] = {}
     if include_settings:
-        fields[vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval)] = vol.All(
+        scan_key = vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval)
+        fields[scan_key] = vol.All(
             int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
         )
-        fields[vol.Required(CONF_STATS_PERIOD, default=current_stats_period)] = SelectSelector(
+        period_key = vol.Required(CONF_STATS_PERIOD, default=current_stats_period)
+        fields[period_key] = SelectSelector(
             SelectSelectorConfig(
                 options=STATS_PERIOD_OPTIONS,
                 mode=SelectSelectorMode.DROPDOWN,
             )
         )
-    fields[vol.Required(CONF_SELECTED_MONITORS, default=default_selected)] = SelectSelector(
+    monitors_key = vol.Required(CONF_SELECTED_MONITORS, default=default_selected)
+    fields[monitors_key] = SelectSelector(
         SelectSelectorConfig(
             options=options,
             multiple=True,
@@ -97,9 +105,12 @@ def _build_monitors_schema(
 
 
 class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Config flow for Kuvasz Uptime integration."""
+
     VERSION = 1
 
     def __init__(self) -> None:
+        """Initialize the config flow."""
         self._host: str = ""
         self._api_key: str = ""
         self._verify_ssl: bool = DEFAULT_VERIFY_SSL
@@ -109,12 +120,14 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> KuvaszOptionsFlowHandler:
+    def async_get_options_flow(_config_entry: ConfigEntry) -> KuvaszOptionsFlowHandler:
+        """Return the options flow handler."""
         return KuvaszOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the initial credentials step."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -157,6 +170,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_monitors(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the monitor selection step."""
         if user_input is not None:
             return self.async_create_entry(
                 title=self._host,
@@ -183,9 +197,12 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class KuvaszOptionsFlowHandler(OptionsFlow):
+    """Options flow for updating scan interval and monitor selection."""
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Handle the options init step."""
         if user_input is not None:
             return self.async_create_entry(
                 data={
@@ -208,7 +225,7 @@ class KuvaszOptionsFlowHandler(OptionsFlow):
         except KuvaszApiError:
             return self.async_abort(reason="cannot_connect")
 
-        def _current(key, default=None):
+        def _current(key: str, default: Any = None) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
 
         return self.async_show_form(

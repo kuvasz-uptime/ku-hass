@@ -1,4 +1,5 @@
 """Base entity for Kuvasz monitors."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -21,6 +22,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         coordinator: KuvaszCoordinator,
         monitor: dict[str, Any],
     ) -> None:
+        """Initialize the entity from a coordinator and monitor data dict."""
         super().__init__(coordinator)
         self._monitor_id: int = monitor["id"]
         self._monitor_type: str = monitor["_type"]
@@ -43,6 +45,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
 
     @property
     def device_info(self) -> DeviceInfo:
+        """Return device registry information for this monitor."""
         type_labels = {
             MONITOR_TYPE_HTTP: "HTTP",
             MONITOR_TYPE_PUSH: "Push",
