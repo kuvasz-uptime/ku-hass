@@ -3,9 +3,6 @@
     "step": {
       "user": {
         "title": "Connect to your Kuvasz Uptime instance",
-        "data_placeholder": {
-          "name": "Instance name"
-        },
         "data": {
           "name": "Instance name",
           "host": "Host URL (e.g. http://192.168.1.10:8080)",
