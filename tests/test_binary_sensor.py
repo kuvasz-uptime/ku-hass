@@ -178,7 +178,9 @@ class TestSslBinarySensor:
         assert attrs["ssl_status"] == "VALID"
         assert attrs["ssl_error"] is None
         assert attrs["ssl_expiry_threshold"] == 30
-        assert attrs["ssl_status_since"] == "2024-01-01T00:00:00Z"
+        assert attrs["ssl_status_started_at"] == "2024-01-01T00:00:00Z"
+        assert attrs["last_ssl_check"] == "2024-01-01T01:00:00Z"
+        assert attrs["next_ssl_check"] == "2024-01-01T01:01:00Z"
         assert attrs["ssl_valid_until"] == "2025-01-01T00:00:00Z"
 
     async def test_unique_id_format(self, hass):
@@ -205,7 +207,8 @@ class TestUptimeBinarySensorAttributes:
         attrs = uptime.extra_state_attributes
         assert attrs["failure_count_threshold"] == 1
         assert attrs["uptime_error"] is None
-        assert attrs["uptime_status_since"] == "2024-01-01T00:00:00Z"
+        assert attrs["uptime_status_started_at"] == "2024-01-01T00:00:00Z"
+        assert attrs["last_uptime_check"] == "2024-01-01T01:00:00Z"
         assert attrs["created_at"] == "2024-01-01T00:00:00Z"
         assert attrs["updated_at"] is None
 
@@ -216,13 +219,14 @@ class TestUptimeBinarySensorAttributes:
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         attrs = uptime.extra_state_attributes
         assert attrs["url"] == "https://example.com"
+        assert attrs["next_uptime_check"] == "2024-01-01T01:01:00Z"
         assert attrs["uptime_check_interval"] == 60
         assert attrs["request_method"] == "GET"
         assert attrs["follow_redirects"] is True
         assert attrs["force_no_cache"] is False
         assert attrs["latency_history_enabled"] is True
         assert attrs["expected_status_codes"] == [200]
-        assert attrs["response_time_threshold_ms"] is None
+        assert attrs["response_time_threshold_millis"] is None
         assert attrs["expected_keyword"] is None
         assert attrs["expected_keyword_case_sensitive"] is False
         assert attrs["expected_keyword_negated"] is False
@@ -241,6 +245,7 @@ class TestUptimeBinarySensorAttributes:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         attrs = uptime.extra_state_attributes
+        assert attrs["next_expected_heartbeat"] == "2024-01-01T01:05:00Z"
         assert attrs["heartbeat_interval"] == 300
         assert attrs["grace_period"] == 60
         assert attrs["failure_count_threshold"] == 1
@@ -358,6 +363,7 @@ class TestIcmpBinarySensor:
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         attrs = uptime.extra_state_attributes
         assert attrs["host"] == "192.168.1.1"
+        assert attrs["next_uptime_check"] == "2024-01-01T01:01:00Z"
         assert attrs["uptime_check_interval"] == 60
         assert attrs["packet_count"] == 3
         assert attrs["timeout_seconds"] == 5
