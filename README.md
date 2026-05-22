@@ -38,7 +38,8 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 ## Requirements
 
-- Home Assistant 2024.1 or newer
+- Home Assistant 2026.3 or newer
+- Kuvasz Uptime 3.2.0 or newer
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (self-hosted)
 - Your [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) for your Kuvasz instance
 
