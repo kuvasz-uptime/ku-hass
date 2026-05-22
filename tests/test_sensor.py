@@ -40,7 +40,9 @@ ICMP_NO_METRICS_SENSOR_COUNT = 4
 
 def _make_coordinator(hass, monitors, stats_map=None):
     client = MagicMock(spec=KuvaszClient)
-    coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+    coordinator = KuvaszCoordinator(
+        hass, client, scan_interval=30, entry_id="test_entry"
+    )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
         stats=stats_map or {},
@@ -120,7 +122,7 @@ class TestUptimePercentageSensor:
         entities = await _setup_integration(hass, coordinator)
 
         pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
-        assert pct.unique_id == "kuvasz_uptime_http_1_uptime_ratio"
+        assert pct.unique_id == "kuvasz_uptime_test_entry_http_1_uptime_ratio"
 
     async def test_uptime_created_for_all_monitor_types(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
@@ -167,7 +169,7 @@ class TestAvgResponseTimeSensor:
         entities = await _setup_integration(hass, coordinator)
 
         rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
-        assert rt.unique_id == "kuvasz_uptime_http_1_average_latency_in_ms"
+        assert rt.unique_id == "kuvasz_uptime_test_entry_http_1_average_latency_in_ms"
 
     async def test_only_created_for_http_monitors(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
@@ -382,7 +384,7 @@ class TestIcmpSensors:
         entities = await _setup_integration(hass, coordinator)
 
         pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
-        assert pct.unique_id == "kuvasz_uptime_icmp_30_uptime_ratio"
+        assert pct.unique_id == "kuvasz_uptime_test_entry_icmp_30_uptime_ratio"
 
         pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
-        assert pkt.unique_id == "kuvasz_uptime_icmp_30_average_packet_loss"
+        assert pkt.unique_id == "kuvasz_uptime_test_entry_icmp_30_average_packet_loss"

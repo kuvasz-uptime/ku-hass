@@ -201,14 +201,20 @@ ICMP_MONITOR_STATS = {
 }
 
 SETTINGS_RESPONSE = {
-    "versionInfo": {"version": "2.1.0", "buildTime": "2024-01-01T00:00:00Z"},
+    "versionInfo": {
+        "installedVersion": "2.1.0",
+        "latestVersion": "2.2.0",
+        "latestVersionDetails": "https://github.com/kuvasz-uptime/kuvasz/releases/tag/v2.2.0",
+        "isUpToDate": False,
+    },
     "app": {
         "editabilityState": {
             "areHttpMonitorsReadOnly": False,
             "areStatusPagesReadOnly": False,
             "arePushMonitorsReadOnly": False,
             "areIcmpMonitorsReadOnly": False,
-        }
+        },
+        "updateChecksEnabled": True,
     },
 }
 

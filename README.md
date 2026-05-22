@@ -27,6 +27,7 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | SSL Valid Until | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | Last Heartbeat | Sensor (`timestamp`) | Push |
 | Next Expected Heartbeat | Sensor (`timestamp`) | Push |
+| Kuvasz Update | Update | Integration (when update checks are enabled) |
 
 **Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise.
 
@@ -36,9 +37,12 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 **Enabled switch** lets you pause and resume a monitor directly from Home Assistant. It is only created for monitor types that are writable in your Kuvasz instance. Read-only monitor types (e.g. managed via YAML/GitOps) only get the binary sensor.
 
+**Kuvasz Update** tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance. The entity belongs to a separate **Kuvasz Server** device.
+
 ## Requirements
 
-- Home Assistant 2024.1 or newer
+- Home Assistant 2026.3 or newer
+- Kuvasz Uptime 3.2.0 or newer
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (self-hosted)
 - Your [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) for your Kuvasz instance
 
@@ -61,8 +65,10 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 1. Go to **Settings → Devices & Services → Add Integration**.
 2. Search for **Kuvasz Uptime**.
-3. Enter your Kuvasz Uptime instance URL (e.g. `http://192.168.1.10:8080`) and API key.
+3. Enter an **Instance name**, your instance URL (e.g. `http://192.168.1.10:8080`), and API key.
 4. Select which monitors to expose as devices (all are selected by default).
+
+The instance name must be unique across all configured Kuvasz entries. It is used to scope every entity and device identifier, so two monitors with the same numeric ID on different hosts never collide. Multiple instances can be added by repeating the setup with a different name and host.
 
 You can change options later via the **Configure** button on the integration card:
 

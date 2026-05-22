@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH, Platform.UPDATE]
 
 
 def _entry_value(entry: ConfigEntry, key: str, default: Any | None = None) -> Any:
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     selected_monitors = _entry_value(entry, CONF_SELECTED_MONITORS)
     stats_period = _entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval, selected_monitors, stats_period
+        hass, client, scan_interval, selected_monitors, stats_period, entry.entry_id
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -69,13 +69,15 @@ def _remove_stale_devices(
     """
     Remove devices (and their entities) for monitors no longer in the active set.
 
-    Device identifiers use the format (DOMAIN, "{type}_{id}") - see entity.py.
-    Removing a device from the device registry also removes all its entity
-    registry entries.
+    Device identifiers use format (DOMAIN, "{entry_id}_{type}_{id}") — see entity.py.
+    The server hub device (DOMAIN, "{entry_id}_server") is excluded and never removed.
+    Removing a device also removes all its entity registry entries.
     """
-    active_keys = {f"{m['_type']}_{m['id']}" for m in active_monitors}
+    entry_id = entry.entry_id
+    active_keys = {f"{entry_id}_{m['_type']}_{m['id']}" for m in active_monitors}
+    active_keys.add(f"{entry_id}_server")
     dev_reg = dr.async_get(hass)
-    for device_entry in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+    for device_entry in dr.async_entries_for_config_entry(dev_reg, entry_id):
         monitor_key = next(
             (
                 identifier

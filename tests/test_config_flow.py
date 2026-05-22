@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.kuvasz_uptime.const import (
@@ -17,6 +18,7 @@ from custom_components.kuvasz_uptime.const import (
 from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
 
 CREDENTIALS = {
+    "name": "My Kuvasz",
     "host": "http://kuvasz.local:8080",
     "api_key": "supersecretapikey1234",
     "scan_interval": 60,
@@ -195,6 +197,7 @@ class TestConfigFlowStep2:
         result = await _complete_flow(hass, selected=ALL_MONITOR_KEYS)
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"]["name"] == CREDENTIALS["name"]
         assert result["data"]["host"] == CREDENTIALS["host"]
         assert result["data"]["api_key"] == CREDENTIALS["api_key"]
         assert result["data"]["scan_interval"] == 60
@@ -213,11 +216,11 @@ class TestConfigFlowStep2:
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["data"]["selected_monitors"] == []
 
-    async def test_entry_title_is_host(self, hass):
+    async def test_entry_title_is_name(self, hass):
         result = await _complete_flow(hass)
-        assert result["title"] == CREDENTIALS["host"]
+        assert result["title"] == CREDENTIALS["name"]
 
-    async def test_aborts_if_already_configured(self, hass):
+    async def test_aborts_if_same_host_reconfigured_with_different_name(self, hass):
         await _complete_flow(hass)
 
         with patch(
@@ -229,11 +232,55 @@ class TestConfigFlowStep2:
 
             result = await _start_flow(hass)
             result = await hass.config_entries.flow.async_configure(
-                result["flow_id"], CREDENTIALS
+                result["flow_id"],
+                {**CREDENTIALS, "name": "Different Name"},
             )
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"
+
+    async def test_rejects_duplicate_name(self, hass):
+        await _complete_flow(hass)
+
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
+            instance = MockClient.return_value
+            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
+
+            result = await _start_flow(hass)
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {**CREDENTIALS, "host": "http://other.local:8080"},
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "user"
+        assert result["errors"][CONF_NAME] == "name_already_used"
+
+    async def test_rejects_same_name_on_different_host(self, hass):
+        await _complete_flow(hass)
+
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
+            instance = MockClient.return_value
+            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
+
+            result = await _start_flow(hass)
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {**CREDENTIALS, "host": "http://other.local:8080"},
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"][CONF_NAME] == "name_already_used"
+
+    async def test_name_stored_in_entry_data(self, hass):
+        result = await _complete_flow(hass)
+        assert result["data"][CONF_NAME] == CREDENTIALS["name"]
 
     async def test_monitor_options_include_type_label(self, hass):
         with patch(

@@ -28,6 +28,13 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         self._monitor_type: str = monitor["_type"]
         self._monitor_name: str = monitor["name"]
 
+    def _build_unique_id(self, key: str) -> str:
+        """Return a globally unique entity ID scoped to this config entry."""
+        return (
+            f"{DOMAIN}_{self._instance_key}"
+            f"_{self._monitor_type}_{self._monitor_id}_{key}"
+        )
+
     def _build_entity_id(self, platform: str, key: str) -> str:
         name_slug = slugify(self._monitor_name)
         return f"{platform}.kuvasz_{self._monitor_type}_{name_slug}_{key}"
@@ -44,6 +51,11 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         return self.coordinator.data.monitor_stats(self._monitor_type, self._monitor_id)
 
     @property
+    def _instance_key(self) -> str:
+        """Return a unique prefix for this config entry, scoping all identifiers."""
+        return self.coordinator.entry_id
+
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device registry information for this monitor."""
         type_labels = {
@@ -52,8 +64,9 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
             MONITOR_TYPE_ICMP: "ICMP",
         }
         type_label = type_labels.get(self._monitor_type, self._monitor_type.upper())
+        monitor_ident = f"{self._instance_key}_{self._monitor_type}_{self._monitor_id}"
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._monitor_type}_{self._monitor_id}")},
+            identifiers={(DOMAIN, monitor_ident)},
             name=self._monitor_name,
             manufacturer="Kuvasz Uptime",
             model=f"{type_label} Monitor",

@@ -12,7 +12,9 @@ from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
 def _make_entry(hass, selected=None):
     entry = MockConfigEntry(
         domain=DOMAIN,
+        entry_id="test_entry",
         data={
+            "name": "Test Instance",
             "host": "http://kuvasz.local:8080",
             "api_key": "test-key",
             "scan_interval": 30,
@@ -47,8 +49,8 @@ async def _register_entity(hass, entry, device, unique_id, platform="binary_sens
 class TestStaleDeviceCleanup:
     async def test_removes_device_for_deselected_monitor(self, hass):
         entry = _make_entry(hass)
-        _register_device(hass, entry, "http_1")
-        push_dev = _register_device(hass, entry, "push_20")
+        _register_device(hass, entry, f"{entry.entry_id}_http_1")
+        push_dev = _register_device(hass, entry, f"{entry.entry_id}_push_20")
 
         _remove_stale_devices(hass, entry, [HTTP_MONITOR_UP])
 
@@ -57,8 +59,8 @@ class TestStaleDeviceCleanup:
 
     async def test_keeps_device_for_active_monitor(self, hass):
         entry = _make_entry(hass)
-        http_dev = _register_device(hass, entry, "http_1")
-        _register_device(hass, entry, "push_20")
+        http_dev = _register_device(hass, entry, f"{entry.entry_id}_http_1")
+        _register_device(hass, entry, f"{entry.entry_id}_push_20")
 
         _remove_stale_devices(hass, entry, [HTTP_MONITOR_UP])
 
@@ -67,12 +69,16 @@ class TestStaleDeviceCleanup:
 
     async def test_removes_entities_with_device(self, hass):
         entry = _make_entry(hass)
-        push_dev = _register_device(hass, entry, "push_20")
+        push_dev = _register_device(hass, entry, f"{entry.entry_id}_push_20")
         await _register_entity(
-            hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_status"
+            hass, entry, push_dev, "kuvasz_uptime_test_entry_push_20_uptime_status"
         )
         await _register_entity(
-            hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_ratio", "sensor"
+            hass,
+            entry,
+            push_dev,
+            "kuvasz_uptime_test_entry_push_20_uptime_ratio",
+            "sensor",
         )
 
         _remove_stale_devices(hass, entry, [HTTP_MONITOR_UP])
@@ -80,21 +86,23 @@ class TestStaleDeviceCleanup:
         ent_reg = er.async_get(hass)
         assert (
             ent_reg.async_get_entity_id(
-                "binary_sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_status"
+                "binary_sensor",
+                DOMAIN,
+                "kuvasz_uptime_test_entry_push_20_uptime_status",
             )
             is None
         )
         assert (
             ent_reg.async_get_entity_id(
-                "sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_ratio"
+                "sensor", DOMAIN, "kuvasz_uptime_test_entry_push_20_uptime_ratio"
             )
             is None
         )
 
     async def test_no_op_when_all_monitors_active(self, hass):
         entry = _make_entry(hass)
-        http_dev = _register_device(hass, entry, "http_1")
-        push_dev = _register_device(hass, entry, "push_20")
+        http_dev = _register_device(hass, entry, f"{entry.entry_id}_http_1")
+        push_dev = _register_device(hass, entry, f"{entry.entry_id}_push_20")
 
         _remove_stale_devices(hass, entry, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
 
@@ -112,8 +120,8 @@ class TestStaleDeviceCleanup:
 
     async def test_removes_all_deselected_devices(self, hass):
         entry = _make_entry(hass)
-        _register_device(hass, entry, "http_1")
-        push_dev = _register_device(hass, entry, "push_20")
+        _register_device(hass, entry, f"{entry.entry_id}_http_1")
+        push_dev = _register_device(hass, entry, f"{entry.entry_id}_push_20")
 
         _remove_stale_devices(hass, entry, [])
 

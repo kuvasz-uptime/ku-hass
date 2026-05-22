@@ -54,9 +54,7 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the uptime binary sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_uptime_status"
-        )
+        self._attr_unique_id = self._build_unique_id("uptime_status")
         self.entity_id = self._build_entity_id("binary_sensor", "uptime_status")
 
     @property
@@ -128,9 +126,7 @@ class KuvaszEnabledBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the enabled binary sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_enabled"
-        )
+        self._attr_unique_id = self._build_unique_id("enabled")
         self.entity_id = self._build_entity_id("binary_sensor", "enabled")
 
     @property
@@ -151,9 +147,7 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the SSL binary sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_ssl_status"
-        )
+        self._attr_unique_id = self._build_unique_id("ssl_status")
         self.entity_id = self._build_entity_id("binary_sensor", "ssl_status")
 
     @property

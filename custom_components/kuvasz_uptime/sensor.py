@@ -135,9 +135,7 @@ class KuvaszUptimePercentageSensor(KuvaszMonitorEntity, SensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the uptime percentage sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_uptime_ratio"
-        )
+        self._attr_unique_id = self._build_unique_id("uptime_ratio")
         self.entity_id = self._build_entity_id("sensor", "uptime_ratio")
 
     @property
@@ -161,9 +159,7 @@ class KuvaszAvgResponseTimeSensor(KuvaszMonitorEntity, SensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the average response time sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_latency_in_ms"
-        )
+        self._attr_unique_id = self._build_unique_id("average_latency_in_ms")
         self.entity_id = self._build_entity_id("sensor", "average_latency_in_ms")
 
     @property
@@ -186,9 +182,7 @@ class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the average packet loss sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_packet_loss"
-        )
+        self._attr_unique_id = self._build_unique_id("average_packet_loss")
         self.entity_id = self._build_entity_id("sensor", "average_packet_loss")
 
     @property
@@ -214,9 +208,7 @@ class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):
         """Initialize the timestamp sensor from its description."""
         super().__init__(coordinator, monitor)
         self._description = description
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_{description.key}"
-        )
+        self._attr_unique_id = self._build_unique_id(description.key)
         self._attr_translation_key = description.translation_key
         self.entity_id = self._build_entity_id("sensor", description.key)
 
