@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.13+
+- Python 3.14+
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (for manual end-to-end testing)
 
 ## Setup
@@ -13,6 +13,13 @@ cd ku-hass
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements_test.txt
+```
+
+## Linting
+
+```bash
+python3 -m ruff check .
+python3 -m ruff check . --fix
 ```
 
 ## Running tests

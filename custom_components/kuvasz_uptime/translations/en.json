@@ -61,7 +61,7 @@
         "name": "Uptime Ratio"
       },
       "average_latency_in_ms": {
-        "name": "Average Latency in ms"
+        "name": "Average Latency"
       },
       "average_packet_loss": {
         "name": "Average Packet Loss"

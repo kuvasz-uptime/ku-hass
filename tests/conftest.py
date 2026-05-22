@@ -1,4 +1,5 @@
 """Shared fixtures for Kuvasz integration tests."""
+
 import pytest
 
 pytest_plugins = "pytest_homeassistant_custom_component"
@@ -8,6 +9,7 @@ pytest_plugins = "pytest_homeassistant_custom_component"
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Allow HA to discover integrations under custom_components/."""
     return
+
 
 # ---------------------------------------------------------------------------
 # API response fixtures (match Kuvasz DTO field names exactly)

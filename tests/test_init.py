@@ -1,8 +1,8 @@
 """Tests for integration setup and stale device/entity cleanup."""
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.kuvasz_uptime.__init__ import _remove_stale_devices
 from custom_components.kuvasz_uptime.const import DOMAIN
@@ -36,7 +36,9 @@ def _register_device(hass, entry, monitor_key):
 async def _register_entity(hass, entry, device, unique_id, platform="binary_sensor"):
     ent_reg = er.async_get(hass)
     return ent_reg.async_get_or_create(
-        platform, DOMAIN, unique_id,
+        platform,
+        DOMAIN,
+        unique_id,
         config_entry=entry,
         device_id=device.id,
     )
@@ -66,14 +68,28 @@ class TestStaleDeviceCleanup:
     async def test_removes_entities_with_device(self, hass):
         entry = _make_entry(hass)
         push_dev = _register_device(hass, entry, "push_20")
-        await _register_entity(hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_status")
-        await _register_entity(hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_ratio", "sensor")
+        await _register_entity(
+            hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_status"
+        )
+        await _register_entity(
+            hass, entry, push_dev, "kuvasz_uptime_push_20_uptime_ratio", "sensor"
+        )
 
         _remove_stale_devices(hass, entry, [HTTP_MONITOR_UP])
 
         ent_reg = er.async_get(hass)
-        assert ent_reg.async_get_entity_id("binary_sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_status") is None
-        assert ent_reg.async_get_entity_id("sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_ratio") is None
+        assert (
+            ent_reg.async_get_entity_id(
+                "binary_sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_status"
+            )
+            is None
+        )
+        assert (
+            ent_reg.async_get_entity_id(
+                "sensor", DOMAIN, "kuvasz_uptime_push_20_uptime_ratio"
+            )
+            is None
+        )
 
     async def test_no_op_when_all_monitors_active(self, hass):
         entry = _make_entry(hass)

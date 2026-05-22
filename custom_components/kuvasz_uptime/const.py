@@ -1,3 +1,5 @@
+"""Constants for the Kuvasz Uptime integration."""
+
 DOMAIN = "kuvasz_uptime"
 
 CONF_API_KEY = "api_key"
@@ -14,12 +16,12 @@ MAX_SCAN_INTERVAL = 3600
 
 DEFAULT_STATS_PERIOD = "P1D"
 STATS_PERIOD_OPTIONS = [
-    {"value": "PT1H",  "label": "1 hour"},
-    {"value": "PT6H",  "label": "6 hours"},
+    {"value": "PT1H", "label": "1 hour"},
+    {"value": "PT6H", "label": "6 hours"},
     {"value": "PT12H", "label": "12 hours"},
-    {"value": "P1D",   "label": "1 day"},
-    {"value": "P7D",   "label": "7 days"},
-    {"value": "P30D",  "label": "30 days"},
+    {"value": "P1D", "label": "1 day"},
+    {"value": "P7D", "label": "7 days"},
+    {"value": "P30D", "label": "30 days"},
 ]
 
 API_BASE = "/api/v2"

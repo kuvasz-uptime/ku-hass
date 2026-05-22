@@ -1,27 +1,33 @@
 """Sensors for Kuvasz monitor statistics and status timestamps."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
-from .coordinator import KuvaszCoordinator
 from .entity import KuvaszMonitorEntity
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .coordinator import KuvaszCoordinator
 
 
 @dataclass(frozen=True)
 class KuvaszTimestampSensorDescription:
+    """Describes a timestamp sensor with its data key and visibility rule."""
+
     key: str
     translation_key: str
     monitor_data_key: str
@@ -96,6 +102,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Set up Kuvasz sensors for a config entry."""
     coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[SensorEntity] = []
 
@@ -126,12 +133,16 @@ class KuvaszUptimePercentageSensor(KuvaszMonitorEntity, SensorEntity):
     _attr_translation_key = "uptime_ratio"
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        """Initialize the uptime percentage sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_uptime_ratio"
+        self._attr_unique_id = (
+            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_uptime_ratio"
+        )
         self.entity_id = self._build_entity_id("sensor", "uptime_ratio")
 
     @property
     def native_value(self) -> float | None:
+        """Return uptime ratio as a percentage (0-100)."""
         ratio = self._monitor_stats.get("uptimeHistory", {}).get("uptimeRatio")
         if ratio is None:
             return None
@@ -148,12 +159,16 @@ class KuvaszAvgResponseTimeSensor(KuvaszMonitorEntity, SensorEntity):
     _attr_translation_key = "average_latency_in_ms"
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        """Initialize the average response time sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_latency_in_ms"
+        self._attr_unique_id = (
+            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_latency_in_ms"
+        )
         self.entity_id = self._build_entity_id("sensor", "average_latency_in_ms")
 
     @property
     def native_value(self) -> float | None:
+        """Return average response latency in milliseconds."""
         latency_stats = self._monitor_stats.get("latencyStats")
         if latency_stats is None:
             return None
@@ -169,12 +184,16 @@ class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
     _attr_translation_key = "average_packet_loss"
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        """Initialize the average packet loss sensor."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_packet_loss"
+        self._attr_unique_id = (
+            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_average_packet_loss"
+        )
         self.entity_id = self._build_entity_id("sensor", "average_packet_loss")
 
     @property
     def native_value(self) -> float | None:
+        """Return average packet loss as a percentage."""
         packet_loss_stats = self._monitor_stats.get("packetLossStats")
         if packet_loss_stats is None:
             return None
@@ -192,14 +211,18 @@ class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):
         monitor: dict[str, Any],
         description: KuvaszTimestampSensorDescription,
     ) -> None:
+        """Initialize the timestamp sensor from its description."""
         super().__init__(coordinator, monitor)
         self._description = description
-        self._attr_unique_id = f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_{description.key}"
+        self._attr_unique_id = (
+            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_{description.key}"
+        )
         self._attr_translation_key = description.translation_key
         self.entity_id = self._build_entity_id("sensor", description.key)
 
     @property
     def native_value(self) -> datetime | None:
+        """Return the parsed datetime value from the monitor data."""
         raw = self._monitor_data.get(self._description.monitor_data_key)
         if raw is None:
             return None
