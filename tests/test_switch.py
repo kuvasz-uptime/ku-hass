@@ -18,7 +18,9 @@ def _make_coordinator(
     client.patch_http_monitor = AsyncMock()
     client.patch_push_monitor = AsyncMock()
     client.patch_icmp_monitor = AsyncMock()
-    coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+    coordinator = KuvaszCoordinator(
+        hass, client, scan_interval=30, entry_id="test_entry"
+    )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
         stats={},
@@ -70,12 +72,14 @@ class TestEnabledSwitch:
     async def test_unique_id_http(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
-        assert entities[0].unique_id == "kuvasz_uptime_http_1_enabled_switch"
+        assert entities[0].unique_id == "kuvasz_uptime_test_entry_http_1_enabled_switch"
 
     async def test_unique_id_push(self, hass):
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
-        assert entities[0].unique_id == "kuvasz_uptime_push_20_enabled_switch"
+        assert (
+            entities[0].unique_id == "kuvasz_uptime_test_entry_push_20_enabled_switch"
+        )
 
     async def test_one_switch_per_writable_monitor(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
@@ -185,4 +189,6 @@ class TestEnabledSwitchActions:
     async def test_icmp_unique_id_format(self, hass):
         coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
-        assert entities[0].unique_id == "kuvasz_uptime_icmp_30_enabled_switch"
+        assert (
+            entities[0].unique_id == "kuvasz_uptime_test_entry_icmp_30_enabled_switch"
+        )

@@ -39,9 +39,7 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the enabled switch."""
         super().__init__(coordinator, monitor)
-        self._attr_unique_id = (
-            f"{DOMAIN}_{self._monitor_type}_{self._monitor_id}_enabled_switch"
-        )
+        self._attr_unique_id = self._build_unique_id("enabled_switch")
         self.entity_id = self._build_entity_id("switch", "enabled")
 
     @property

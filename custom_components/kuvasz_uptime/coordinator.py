@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 class KuvaszCoordinatorData:
     """Holds all fetched Kuvasz data."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         monitors: list[dict[str, Any]],
         stats: dict[str, dict[str, Any]],
@@ -35,6 +35,8 @@ class KuvaszCoordinatorData:
         http_read_only: bool = False,
         push_read_only: bool = False,
         icmp_read_only: bool = False,
+        version_info: dict[str, Any] | None = None,
+        update_checks_enabled: bool = False,
     ) -> None:
         """Initialize coordinator data with monitors, stats and read-only flags."""
         self.monitors = monitors
@@ -43,6 +45,8 @@ class KuvaszCoordinatorData:
         self.http_read_only = http_read_only
         self.push_read_only = push_read_only
         self.icmp_read_only = icmp_read_only
+        self.version_info: dict[str, Any] = version_info or {}
+        self.update_checks_enabled = update_checks_enabled
 
     def monitor_stats(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
         """Return stats dict for the given monitor, or empty dict if unavailable."""
@@ -62,13 +66,14 @@ class KuvaszCoordinatorData:
 class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     """Coordinator that fetches and caches all Kuvasz monitor data."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         hass: HomeAssistant,
         client: KuvaszClient,
         scan_interval: int,
         selected_monitors: list[str] | None = None,
         stats_period: str = DEFAULT_STATS_PERIOD,
+        entry_id: str = "",
     ) -> None:
         """Initialize the coordinator with a Kuvasz API client and poll settings."""
         super().__init__(
@@ -78,6 +83,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             update_interval=timedelta(seconds=scan_interval),
         )
         self.client = client
+        self.entry_id = entry_id
         self._selected_monitors: set[str] | None = (
             set(selected_monitors) if selected_monitors is not None else None
         )
@@ -86,7 +92,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     async def _async_update_data(self) -> KuvaszCoordinatorData:
         try:
             settings = await self.client.get_settings()
-            editability = settings.get("app", {}).get("editabilityState", {})
+            app_settings = settings.get("app", {})
+            editability = app_settings.get("editabilityState", {})
             icmp_supported = "areIcmpMonitorsReadOnly" in editability
             monitors = await self.client.get_all_monitors(icmp_supported=icmp_supported)
             if self._selected_monitors is not None:
@@ -106,6 +113,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             http_read_only=editability.get("areHttpMonitorsReadOnly", False),
             push_read_only=editability.get("arePushMonitorsReadOnly", False),
             icmp_read_only=editability.get("areIcmpMonitorsReadOnly", False),
+            version_info=settings.get("versionInfo"),
+            update_checks_enabled=app_settings.get("updateChecksEnabled", False),
         )
 
     async def _fetch_stats(

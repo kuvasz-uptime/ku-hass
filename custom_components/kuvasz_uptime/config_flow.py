@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -42,6 +42,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_NAME): str,
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_API_KEY): str,
         vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
@@ -111,6 +112,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
+        self._name: str = ""
         self._host: str = ""
         self._api_key: str = ""
         self._verify_ssl: bool = DEFAULT_VERIFY_SSL
@@ -131,35 +133,45 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            name = user_input[CONF_NAME].strip()
             host = user_input[CONF_HOST].rstrip("/")
             api_key = user_input[CONF_API_KEY]
             verify_ssl = user_input[CONF_VERIFY_SSL]
             scan_interval = user_input[CONF_SCAN_INTERVAL]
 
-            await self.async_set_unique_id(host)
-            self._abort_if_unique_id_configured()
-
-            session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
-            client = KuvaszClient(host=host, api_key=api_key, session=session)
-
-            try:
-                await client.verify_connection()
-                self._monitors = await client.get_all_monitors()
-            except KuvaszAuthError:
-                errors["base"] = "invalid_auth"
-            except KuvaszApiError:
-                _LOGGER.exception("Failed to connect to Kuvasz instance at %s", host)
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during Kuvasz Uptime setup")
-                errors["base"] = "unknown"
+            existing_names = {
+                e.data.get(CONF_NAME) for e in self._async_current_entries()
+            }
+            if name in existing_names:
+                errors[CONF_NAME] = "name_already_used"
             else:
-                self._host = host
-                self._api_key = api_key
-                self._verify_ssl = verify_ssl
-                self._scan_interval = scan_interval
-                self._stats_period = user_input[CONF_STATS_PERIOD]
-                return await self.async_step_monitors()
+                await self.async_set_unique_id(host)
+                self._abort_if_unique_id_configured()
+
+                session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
+                client = KuvaszClient(host=host, api_key=api_key, session=session)
+
+                try:
+                    await client.verify_connection()
+                    self._monitors = await client.get_all_monitors()
+                except KuvaszAuthError:
+                    errors["base"] = "invalid_auth"
+                except KuvaszApiError:
+                    _LOGGER.exception(
+                        "Failed to connect to Kuvasz instance at %s", host
+                    )
+                    errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected error during Kuvasz Uptime setup")
+                    errors["base"] = "unknown"
+                else:
+                    self._name = name
+                    self._host = host
+                    self._api_key = api_key
+                    self._verify_ssl = verify_ssl
+                    self._scan_interval = scan_interval
+                    self._stats_period = user_input[CONF_STATS_PERIOD]
+                    return await self.async_step_monitors()
 
         return self.async_show_form(
             step_id="user",
@@ -173,8 +185,9 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the monitor selection step."""
         if user_input is not None:
             return self.async_create_entry(
-                title=self._host,
+                title=self._name,
                 data={
+                    CONF_NAME: self._name,
                     CONF_HOST: self._host,
                     CONF_API_KEY: self._api_key,
                     CONF_VERIFY_SSL: self._verify_ssl,

@@ -22,7 +22,9 @@ from tests.conftest import (
 
 def _make_coordinator(hass, monitors, stats_map=None):
     client = MagicMock(spec=KuvaszClient)
-    coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+    coordinator = KuvaszCoordinator(
+        hass, client, scan_interval=30, entry_id="test_entry"
+    )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
         stats=stats_map or {},
@@ -104,7 +106,7 @@ class TestUptimeBinarySensor:
         entities = await _setup_integration(hass, coordinator)
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
-        assert uptime.unique_id == "kuvasz_uptime_http_1_uptime_status"
+        assert uptime.unique_id == "kuvasz_uptime_test_entry_http_1_uptime_status"
 
     async def test_device_class_is_connectivity(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
@@ -119,7 +121,7 @@ class TestUptimeBinarySensor:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         assert uptime.device_info["name"] == "My Website"
-        assert (DOMAIN, "http_1") in uptime.device_info["identifiers"]
+        assert (DOMAIN, "test_entry_http_1") in uptime.device_info["identifiers"]
 
 
 class TestSslBinarySensor:
@@ -184,7 +186,7 @@ class TestSslBinarySensor:
         entities = await _setup_integration(hass, coordinator)
 
         ssl = next(e for e in entities if "ssl" in e.unique_id)
-        assert ssl.unique_id == "kuvasz_uptime_http_1_ssl_status"
+        assert ssl.unique_id == "kuvasz_uptime_test_entry_http_1_ssl_status"
 
     async def test_push_monitor_has_no_ssl_sensor(self, hass):
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
@@ -284,14 +286,14 @@ class TestEnabledBinarySensor:
         entities = await _setup_integration(hass, coordinator)
 
         enabled = next(e for e in entities if "enabled" in e.unique_id)
-        assert enabled.unique_id == "kuvasz_uptime_http_1_enabled"
+        assert enabled.unique_id == "kuvasz_uptime_test_entry_http_1_enabled"
 
     async def test_unique_id_format_push(self, hass):
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
         enabled = next(e for e in entities if "enabled" in e.unique_id)
-        assert enabled.unique_id == "kuvasz_uptime_push_20_enabled"
+        assert enabled.unique_id == "kuvasz_uptime_test_entry_push_20_enabled"
 
     async def test_created_for_every_monitor(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
@@ -370,4 +372,4 @@ class TestIcmpBinarySensor:
         entities = await _setup_integration(hass, coordinator)
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
-        assert uptime.unique_id == "kuvasz_uptime_icmp_30_uptime_status"
+        assert uptime.unique_id == "kuvasz_uptime_test_entry_icmp_30_uptime_status"
