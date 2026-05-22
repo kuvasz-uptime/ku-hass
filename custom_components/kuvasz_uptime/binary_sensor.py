@@ -72,7 +72,8 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         attrs: dict[str, Any] = {
             "failure_count_threshold": data.get("failureCountThreshold"),
             "uptime_error": data.get("uptimeError"),
-            "uptime_status_since": data.get("uptimeStatusStartedAt"),
+            "uptime_status_started_at": data.get("uptimeStatusStartedAt"),
+            "last_uptime_check": data.get("lastUptimeCheck"),
             "created_at": data.get("createdAt"),
             "updated_at": data.get("updatedAt"),
         }
@@ -81,13 +82,14 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
                 attrs["url"] = data.get("url")
             attrs.update(
                 {
+                    "next_uptime_check": data.get("nextUptimeCheck"),
                     "uptime_check_interval": data.get("uptimeCheckInterval"),
                     "request_method": data.get("requestMethod"),
                     "follow_redirects": data.get("followRedirects"),
                     "force_no_cache": data.get("forceNoCache"),
                     "latency_history_enabled": data.get("latencyHistoryEnabled"),
                     "expected_status_codes": data.get("expectedStatusCodes"),
-                    "response_time_threshold_ms": data.get(
+                    "response_time_threshold_millis": data.get(
                         "responseTimeThresholdMillis"
                     ),
                     "expected_keyword": data.get("expectedKeyword"),
@@ -100,6 +102,7 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         elif self._monitor_type == MONITOR_TYPE_PUSH:
             attrs.update(
                 {
+                    "next_expected_heartbeat": data.get("nextExpectedHeartbeat"),
                     "heartbeat_interval": data.get("heartbeatInterval"),
                     "grace_period": data.get("gracePeriod"),
                 }
@@ -108,6 +111,7 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
             attrs.update(
                 {
                     "host": data.get("host"),
+                    "next_uptime_check": data.get("nextUptimeCheck"),
                     "uptime_check_interval": data.get("uptimeCheckInterval"),
                     "packet_count": data.get("packetCount"),
                     "timeout_seconds": data.get("timeoutSeconds"),
@@ -166,6 +170,8 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
             "ssl_status": data.get("sslStatus"),
             "ssl_error": data.get("sslError"),
             "ssl_expiry_threshold": data.get("sslExpiryThreshold"),
-            "ssl_status_since": data.get("sslStatusStartedAt"),
+            "ssl_status_started_at": data.get("sslStatusStartedAt"),
+            "last_ssl_check": data.get("lastSSLCheck"),
+            "next_ssl_check": data.get("nextSSLCheck"),
             "ssl_valid_until": data.get("sslValidUntil"),
         }

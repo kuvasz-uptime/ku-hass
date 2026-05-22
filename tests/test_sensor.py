@@ -26,16 +26,16 @@ from tests.conftest import (
 )
 
 # Entity counts per monitor type (from sensor.py only):
-#   HTTP with SSL:             uptime_pct + avg_response + 7 timestamp sensors = 9
-#   HTTP without SSL:          uptime_pct + avg_response + 3 timestamp sensors = 5
-#   Push:                      uptime_pct + 4 timestamp sensors               = 5
-#   ICMP (metrics on):    uptime_pct + avg_response + avg_pkt_loss + 3 timestamps = 6
-#   ICMP (metrics disabled):   uptime_pct + 3 timestamp sensors               = 4
-HTTP_SSL_SENSOR_COUNT = 9
-HTTP_NO_SSL_SENSOR_COUNT = 5
-PUSH_SENSOR_COUNT = 5
-ICMP_METRICS_SENSOR_COUNT = 6
-ICMP_NO_METRICS_SENSOR_COUNT = 4
+#   HTTP with SSL:           uptime_pct, avg_response, ssl_valid_until (3)
+#   HTTP without SSL:        uptime_pct, avg_response (2)
+#   Push:                    uptime_pct, last_heartbeat (2)
+#   ICMP (metrics on):       uptime_pct, avg_response, avg_pkt_loss (3)
+#   ICMP (metrics disabled): uptime_pct (1)
+HTTP_SSL_SENSOR_COUNT = 3
+HTTP_NO_SSL_SENSOR_COUNT = 2
+PUSH_SENSOR_COUNT = 2
+ICMP_METRICS_SENSOR_COUNT = 3
+ICMP_NO_METRICS_SENSOR_COUNT = 1
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
@@ -189,41 +189,28 @@ class TestAvgResponseTimeSensor:
 
 
 class TestTimestampSensors:
-    async def test_http_monitor_creates_all_timestamp_sensors(self, hass):
+    async def test_http_monitor_with_ssl_creates_ssl_valid_until_sensor(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
-        expected_keys = {
-            "uptime_status_started_at",
-            "last_uptime_check",
-            "next_uptime_check",
-            "ssl_status_started_at",
-            "last_ssl_check",
-            "next_ssl_check",
-            "ssl_valid_until",
-        }
         ts_ids = {
             e.unique_id
             for e in entities
             if e.device_class == SensorDeviceClass.TIMESTAMP
         }
-        assert all(
-            f"http_1_{k}" in uid for k in expected_keys for uid in ts_ids if k in uid
-        )
-        assert len(ts_ids) == 7
+        assert len(ts_ids) == 1
+        assert any("ssl_valid_until" in uid for uid in ts_ids)
 
-    async def test_http_monitor_no_ssl_skips_ssl_timestamp_sensors(self, hass):
+    async def test_http_monitor_no_ssl_has_no_timestamp_sensors(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_NO_SSL])
         entities = await _setup_integration(hass, coordinator)
 
         ts_entities = [
             e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
         ]
-        ts_keys = [e.unique_id for e in ts_entities]
-        assert len(ts_entities) == 3
-        assert not any("ssl" in uid for uid in ts_keys)
+        assert len(ts_entities) == 0
 
-    async def test_push_monitor_creates_heartbeat_timestamp_sensors(self, hass):
+    async def test_push_monitor_creates_last_heartbeat_sensor(self, hass):
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
@@ -231,26 +218,8 @@ class TestTimestampSensors:
             e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
         ]
         ts_keys = [e.unique_id for e in ts_entities]
-        assert len(ts_entities) == 4
+        assert len(ts_entities) == 1
         assert any("last_heartbeat" in uid for uid in ts_keys)
-        assert any("next_expected_heartbeat" in uid for uid in ts_keys)
-
-    async def test_timestamp_sensor_parses_iso_string(self, hass):
-        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
-        entities = await _setup_integration(hass, coordinator)
-
-        last_check = next(e for e in entities if "last_uptime_check" in e.unique_id)
-        value = last_check.native_value
-        assert isinstance(value, datetime)
-        assert value.tzinfo is not None
-
-    async def test_timestamp_sensor_returns_none_for_null_field(self, hass):
-        monitor = {**HTTP_MONITOR_UP, "lastUptimeCheck": None}
-        coordinator = _make_coordinator(hass, [monitor])
-        entities = await _setup_integration(hass, coordinator)
-
-        last_check = next(e for e in entities if "last_uptime_check" in e.unique_id)
-        assert last_check.native_value is None
 
     async def test_ssl_expires_sensor_value(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
@@ -259,6 +228,14 @@ class TestTimestampSensors:
         ssl_exp = next(e for e in entities if "ssl_valid_until" in e.unique_id)
         assert ssl_exp.native_value == datetime.fromisoformat("2025-01-01T00:00:00Z")
 
+    async def test_ssl_expires_sensor_returns_none_for_null_field(self, hass):
+        monitor = {**HTTP_MONITOR_UP, "sslValidUntil": None}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        ssl_exp = next(e for e in entities if "ssl_valid_until" in e.unique_id)
+        assert ssl_exp.native_value is None
+
     async def test_push_last_heartbeat_sensor_value(self, hass):
         coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
@@ -266,18 +243,11 @@ class TestTimestampSensors:
         heartbeat = next(e for e in entities if "last_heartbeat" in e.unique_id)
         assert heartbeat.native_value == datetime.fromisoformat("2024-01-01T01:00:00Z")
 
-    async def test_push_next_expected_heartbeat_sensor_value(self, hass):
-        coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP])
-        entities = await _setup_integration(hass, coordinator)
-
-        neh = next(e for e in entities if "next_expected_heartbeat" in e.unique_id)
-        assert neh.native_value == datetime.fromisoformat("2024-01-01T01:05:00Z")
-
     async def test_timestamp_sensor_device_class(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
-        ts = next(e for e in entities if "last_uptime_check" in e.unique_id)
+        ts = next(e for e in entities if "ssl_valid_until" in e.unique_id)
         assert ts.device_class == SensorDeviceClass.TIMESTAMP
 
 
@@ -365,19 +335,14 @@ class TestIcmpSensors:
         pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
         assert pkt.native_value is None
 
-    async def test_icmp_timestamp_sensors_created(self, hass):
+    async def test_icmp_has_no_timestamp_sensors(self, hass):
         coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
 
-        ts_ids = {
-            e.unique_id
-            for e in entities
-            if e.device_class == SensorDeviceClass.TIMESTAMP
-        }
-        assert any("uptime_status_started_at" in uid for uid in ts_ids)
-        assert any("last_uptime_check" in uid for uid in ts_ids)
-        assert any("next_uptime_check" in uid for uid in ts_ids)
-        assert len(ts_ids) == 3
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
+        assert len(ts_entities) == 0
 
     async def test_icmp_unique_id_format(self, hass):
         coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP])

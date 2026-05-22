@@ -37,45 +37,6 @@ class KuvaszTimestampSensorDescription:
 
 TIMESTAMP_SENSOR_DESCRIPTIONS: tuple[KuvaszTimestampSensorDescription, ...] = (
     KuvaszTimestampSensorDescription(
-        key="uptime_status_started_at",
-        translation_key="uptime_status_started_at",
-        monitor_data_key="uptimeStatusStartedAt",
-        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH, MONITOR_TYPE_ICMP),
-    ),
-    KuvaszTimestampSensorDescription(
-        key="last_uptime_check",
-        translation_key="last_uptime_check",
-        monitor_data_key="lastUptimeCheck",
-        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_PUSH, MONITOR_TYPE_ICMP),
-    ),
-    KuvaszTimestampSensorDescription(
-        key="next_uptime_check",
-        translation_key="next_uptime_check",
-        monitor_data_key="nextUptimeCheck",
-        applicable_types=(MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP),
-    ),
-    KuvaszTimestampSensorDescription(
-        key="ssl_status_started_at",
-        translation_key="ssl_status_started_at",
-        monitor_data_key="sslStatusStartedAt",
-        applicable_types=(MONITOR_TYPE_HTTP,),
-        requires_ssl_check=True,
-    ),
-    KuvaszTimestampSensorDescription(
-        key="last_ssl_check",
-        translation_key="last_ssl_check",
-        monitor_data_key="lastSSLCheck",
-        applicable_types=(MONITOR_TYPE_HTTP,),
-        requires_ssl_check=True,
-    ),
-    KuvaszTimestampSensorDescription(
-        key="next_ssl_check",
-        translation_key="next_ssl_check",
-        monitor_data_key="nextSSLCheck",
-        applicable_types=(MONITOR_TYPE_HTTP,),
-        requires_ssl_check=True,
-    ),
-    KuvaszTimestampSensorDescription(
         key="ssl_valid_until",
         translation_key="ssl_valid_until",
         monitor_data_key="sslValidUntil",
@@ -86,12 +47,6 @@ TIMESTAMP_SENSOR_DESCRIPTIONS: tuple[KuvaszTimestampSensorDescription, ...] = (
         key="last_heartbeat",
         translation_key="last_heartbeat",
         monitor_data_key="lastHeartbeat",
-        applicable_types=(MONITOR_TYPE_PUSH,),
-    ),
-    KuvaszTimestampSensorDescription(
-        key="next_expected_heartbeat",
-        translation_key="next_expected_heartbeat",
-        monitor_data_key="nextExpectedHeartbeat",
         applicable_types=(MONITOR_TYPE_PUSH,),
     ),
 )

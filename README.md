@@ -18,20 +18,21 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP |
 | Average Latency | Sensor (`ms`, `duration`) | HTTP; ICMP (when metrics history is enabled) |
 | Average Packet Loss | Sensor (`%`) | ICMP (when metrics history is enabled) |
-| Uptime Status Started At | Sensor (`timestamp`) | HTTP, Push, ICMP |
-| Last Uptime Check | Sensor (`timestamp`) | HTTP, Push, ICMP |
-| Next Uptime Check | Sensor (`timestamp`) | HTTP, ICMP |
-| SSL Status Started At | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
-| Last SSL Check | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
-| Next SSL Check | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | SSL Valid Until | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | Last Heartbeat | Sensor (`timestamp`) | Push |
-| Next Expected Heartbeat | Sensor (`timestamp`) | Push |
 | Kuvasz Update | Update | Integration (when update checks are enabled) |
 
-**Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise.
+**Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise. Extra attributes:
 
-**SSL binary sensor** is `on` when the certificate is `INVALID` (problem detected) and `off` otherwise (`VALID` or `WILL_EXPIRE`). The raw `ssl_status` string is available as an extra attribute.
+| Attribute | Monitors |
+|---|---|
+| `uptime_status_started_at`, `last_uptime_check`, `failure_count_threshold`, `uptime_error`, `created_at`, `updated_at` | HTTP, Push, ICMP |
+| `next_uptime_check`, `uptime_check_interval` | HTTP, ICMP |
+| `url`, `request_method`, `follow_redirects`, `force_no_cache`, `latency_history_enabled`, `expected_status_codes`, `response_time_threshold_millis`, `expected_keyword`, `expected_keyword_case_sensitive`, `expected_keyword_negated` | HTTP |
+| `next_expected_heartbeat`, `heartbeat_interval`, `grace_period` | Push |
+| `host`, `packet_count`, `timeout_seconds`, `packet_loss_threshold`, `metrics_history_enabled` | ICMP |
+
+**SSL binary sensor** is `on` when the certificate is `INVALID` (problem detected) and `off` otherwise (`VALID` or `WILL_EXPIRE`). Extra attributes: `ssl_status`, `ssl_error`, `ssl_expiry_threshold`, `ssl_status_started_at`, `last_ssl_check`, `next_ssl_check`, `ssl_valid_until`.
 
 **Enabled binary sensor** reflects whether the monitor is currently enabled. It is present for every monitor regardless of whether the monitor type is writable.
 
