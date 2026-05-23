@@ -37,12 +37,12 @@ class KuvaszClient:
     def __init__(
         self,
         host: str,
-        api_key: str,
         session: aiohttp.ClientSession,
+        api_key: str | None = None,
     ) -> None:
-        """Initialize the client with a host, API key and shared session."""
+        """Initialize the client with a host, optional API key and shared session."""
         self._base_url = host.rstrip("/")
-        self._headers = {"X-API-KEY": api_key}
+        self._headers = {"X-API-KEY": api_key} if api_key else {}
         self._session = session
 
     async def _get(self, path: str, params: dict[str, str] | None = None) -> Any:

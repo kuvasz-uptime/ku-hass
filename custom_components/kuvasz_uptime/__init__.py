@@ -43,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass, verify_ssl=verify_ssl)
     client = KuvaszClient(
         host=entry.data[CONF_HOST],
-        api_key=entry.data[CONF_API_KEY],
+        api_key=entry.data.get(CONF_API_KEY) or None,
         session=session,
     )
     scan_interval = _entry_value(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)

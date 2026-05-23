@@ -27,7 +27,13 @@ API_KEY = "test-api-key-1234567"
 @pytest.fixture
 async def client():
     async with aiohttp.ClientSession() as session:
-        yield KuvaszClient(host=BASE_URL, api_key=API_KEY, session=session)
+        yield KuvaszClient(host=BASE_URL, session=session, api_key=API_KEY)
+
+
+@pytest.fixture
+async def client_no_key():
+    async with aiohttp.ClientSession() as session:
+        yield KuvaszClient(host=BASE_URL, session=session)
 
 
 class TestVerifyConnection:
@@ -134,6 +140,13 @@ class TestGetMonitors:
             request = next(iter(m.requests.values()))[0]
         assert request.kwargs["headers"]["X-API-KEY"] == API_KEY
 
+    async def test_no_api_key_header_when_key_is_omitted(self, client_no_key):
+        with aioresponses() as m:
+            m.get(f"{BASE_URL}/api/v2/http-monitors", payload=[])
+            await client_no_key.get_http_monitors()
+            request = next(iter(m.requests.values()))[0]
+        assert "X-API-KEY" not in request.kwargs["headers"]
+
     async def test_get_icmp_monitors_raises_if_request_fails(self, client):
         with aioresponses() as m:
             m.get(f"{BASE_URL}/api/v2/icmp-monitors", status=500)
@@ -183,7 +196,7 @@ class TestGetStats:
 
     async def test_trailing_slash_stripped_from_host(self):
         async with aiohttp.ClientSession() as session:
-            client = KuvaszClient(host=f"{BASE_URL}/", api_key=API_KEY, session=session)
+            client = KuvaszClient(host=f"{BASE_URL}/", session=session, api_key=API_KEY)
             with aioresponses() as m:
                 m.get(f"{BASE_URL}/api/v2/settings", payload=SETTINGS_RESPONSE)
                 result = await client.verify_connection()
