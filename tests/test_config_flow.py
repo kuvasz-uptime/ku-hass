@@ -204,6 +204,15 @@ class TestConfigFlowStep2:
         assert result["data"]["stats_period"] == "P7D"
         assert set(result["data"]["selected_monitors"]) == {"http_1", "push_20"}
 
+    async def test_creates_entry_without_api_key(self, hass):
+        credentials_no_key = {k: v for k, v in CREDENTIALS.items() if k != "api_key"}
+        result = await _complete_flow(
+            hass, credentials=credentials_no_key, selected=ALL_MONITOR_KEYS
+        )
+
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"].get("api_key") is None
+
     async def test_creates_entry_with_subset_of_monitors(self, hass):
         result = await _complete_flow(hass, selected=["http_1"])
 

@@ -44,7 +44,7 @@ STEP_USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): str,
         vol.Required(CONF_HOST): str,
-        vol.Required(CONF_API_KEY): str,
+        vol.Optional(CONF_API_KEY): str,
         vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
         vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
@@ -114,7 +114,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._name: str = ""
         self._host: str = ""
-        self._api_key: str = ""
+        self._api_key: str | None = None
         self._verify_ssl: bool = DEFAULT_VERIFY_SSL
         self._scan_interval: int = DEFAULT_SCAN_INTERVAL
         self._stats_period: str = DEFAULT_STATS_PERIOD
@@ -135,7 +135,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             name = user_input[CONF_NAME].strip()
             host = user_input[CONF_HOST].rstrip("/")
-            api_key = user_input[CONF_API_KEY]
+            api_key = user_input.get(CONF_API_KEY) or None
             verify_ssl = user_input[CONF_VERIFY_SSL]
             scan_interval = user_input[CONF_SCAN_INTERVAL]
 
@@ -230,7 +230,7 @@ class KuvaszOptionsFlowHandler(OptionsFlow):
         session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
         client = KuvaszClient(
             host=entry.data[CONF_HOST],
-            api_key=entry.data[CONF_API_KEY],
+            api_key=entry.data.get(CONF_API_KEY) or None,
             session=session,
         )
         try:
