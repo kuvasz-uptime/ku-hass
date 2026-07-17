@@ -15,31 +15,43 @@ from tests.conftest import (
     PUSH_MONITOR_UP,
     SETTINGS_RESPONSE,
     SETTINGS_RESPONSE_NO_ICMP,
+    SETTINGS_RESPONSE_NO_TCP,
+    TCP_MONITOR_STATS,
+    TCP_MONITOR_UP,
 )
 
+DEFAULT_STATS = {
+    "http": HTTP_MONITOR_STATS,
+    "push": PUSH_MONITOR_STATS,
+    "icmp": ICMP_MONITOR_STATS,
+    "tcp": TCP_MONITOR_STATS,
+}
 
-def _make_client(monitors=None, stats=None, monitors_error=None, settings=None):
+
+def _make_client(
+    monitors=None, stats=None, monitors_error=None, settings=None, stats_error=None
+):
     stats = stats or {}
     client = MagicMock(spec=KuvaszClient)
     client.get_settings = AsyncMock(return_value=settings or SETTINGS_RESPONSE)
     if monitors_error:
         client.get_all_monitors = AsyncMock(side_effect=monitors_error)
     else:
-        tagged = []
-        for m in monitors or []:
-            tagged.append(m)
-        client.get_all_monitors = AsyncMock(return_value=tagged)
+        client.get_all_monitors = AsyncMock(return_value=list(monitors or []))
 
-    client.get_http_monitor_stats = AsyncMock(
-        return_value=stats.get("http", HTTP_MONITOR_STATS)
-    )
-    client.get_push_monitor_stats = AsyncMock(
-        return_value=stats.get("push", PUSH_MONITOR_STATS)
-    )
-    client.get_icmp_monitor_stats = AsyncMock(
-        return_value=stats.get("icmp", ICMP_MONITOR_STATS)
-    )
+    async def _stats(spec, monitor_id, period):
+        if stats_error:
+            raise stats_error
+        return stats.get(spec.key, DEFAULT_STATS[spec.key])
+
+    client.get_monitor_stats = AsyncMock(side_effect=_stats)
     return client
+
+
+def _requested_type_keys(client):
+    """Return the keys of the monitor types the coordinator asked to fetch."""
+    (monitor_types,), _ = client.get_all_monitors.call_args
+    return {m.key for m in monitor_types}
 
 
 class TestCoordinatorFetch:
@@ -84,9 +96,9 @@ class TestCoordinatorFetch:
 
     async def test_stats_fetch_failure_does_not_crash_coordinator(self, hass):
         """A stats fetch error for one monitor should not abort the whole update."""
-        client = _make_client(monitors=[HTTP_MONITOR_UP])
-        client.get_http_monitor_stats = AsyncMock(
-            side_effect=KuvaszApiError("stats unavailable")
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP],
+            stats_error=KuvaszApiError("stats unavailable"),
         )
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
 
@@ -192,7 +204,7 @@ class TestIcmpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert coordinator.data.icmp_read_only is True
+        assert "icmp" in coordinator.data.read_only_types
 
     async def test_icmp_not_read_only_by_default(self, hass):
         client = _make_client(monitors=[ICMP_MONITOR_UP])
@@ -200,13 +212,13 @@ class TestIcmpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert coordinator.data.icmp_read_only is False
+        assert "icmp" not in coordinator.data.read_only_types
 
     async def test_is_read_only_icmp(self, hass):
         client = _make_client(monitors=[])
         coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
         await coordinator.async_refresh()
-        coordinator.data.icmp_read_only = True
+        coordinator.data.read_only_types = frozenset({"icmp"})
 
         assert coordinator.data.is_read_only("icmp") is True
 
@@ -221,8 +233,8 @@ class TestIcmpCoordinator:
         await coordinator.async_refresh()
 
         assert coordinator.last_update_success is True
-        client.get_all_monitors.assert_called_once_with(icmp_supported=False)
-        assert coordinator.data.icmp_read_only is False
+        assert _requested_type_keys(client) == {"http", "push"}
+        assert "icmp" not in coordinator.data.read_only_types
 
     async def test_icmp_fetched_when_in_settings(self, hass):
         """Instances with areIcmpMonitorsReadOnly should fetch ICMP monitors."""
@@ -233,4 +245,88 @@ class TestIcmpCoordinator:
 
         await coordinator.async_refresh()
 
-        client.get_all_monitors.assert_called_once_with(icmp_supported=True)
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp"}
+
+
+class TestTcpCoordinator:
+    async def test_tcp_stats_fetched(self, hass):
+        client = _make_client(
+            monitors=[TCP_MONITOR_UP], stats={"tcp": TCP_MONITOR_STATS}
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        stats = coordinator.data.monitor_stats("tcp", 40)
+        assert stats["uptimeHistory"]["uptimeRatio"] == 0.9995
+        assert stats["latencyStats"]["averageLatencyInMs"] == 15
+
+    async def test_tcp_read_only_flag_from_settings(self, hass):
+        from tests.conftest import SETTINGS_RESPONSE_READ_ONLY
+
+        client = _make_client(
+            monitors=[TCP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "tcp" in coordinator.data.read_only_types
+
+    async def test_tcp_not_read_only_by_default(self, hass):
+        client = _make_client(monitors=[TCP_MONITOR_UP])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "tcp" not in coordinator.data.read_only_types
+
+    async def test_is_read_only_tcp(self, hass):
+        client = _make_client(monitors=[])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        await coordinator.async_refresh()
+        coordinator.data.read_only_types = frozenset({"tcp"})
+
+        assert coordinator.data.is_read_only("tcp") is True
+
+    async def test_tcp_skipped_when_not_in_settings(self, hass):
+        """An instance with ICMP but without TCP support still updates cleanly."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP],
+            settings=SETTINGS_RESPONSE_NO_TCP,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is True
+        assert _requested_type_keys(client) == {"http", "push", "icmp"}
+        assert "tcp" not in coordinator.data.read_only_types
+
+    async def test_tcp_fetch_failure_fails_the_update(self, hass):
+        """A supported type that errors is a real failure, not absent support.
+
+        Swallowing it would drop every TCP monitor while the update still
+        reported success, leaving the entities looking healthy but empty.
+        """
+        client = _make_client(
+            monitors_error=KuvaszApiError("Failed to fetch tcp monitors: 503"),
+            settings=SETTINGS_RESPONSE,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is False
+
+    async def test_tcp_fetched_when_in_settings(self, hass):
+        """Instances with areTcpMonitorsReadOnly should fetch TCP monitors."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, TCP_MONITOR_UP], settings=SETTINGS_RESPONSE
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp"}
+        assert "tcp_40" in coordinator.data.stats

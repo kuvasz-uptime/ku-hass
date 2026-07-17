@@ -8,25 +8,25 @@ from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
     KuvaszCoordinatorData,
 )
-from tests.conftest import HTTP_MONITOR_UP, ICMP_MONITOR_UP, PUSH_MONITOR_UP
+from custom_components.kuvasz_uptime.monitor_types import MONITOR_TYPES_BY_KEY
+from tests.conftest import (
+    HTTP_MONITOR_UP,
+    ICMP_MONITOR_UP,
+    PUSH_MONITOR_UP,
+    TCP_MONITOR_UP,
+)
 
 
-def _make_coordinator(
-    hass, monitors, *, http_read_only=False, push_read_only=False, icmp_read_only=False
-):
+def _make_coordinator(hass, monitors, *, read_only_types=frozenset()):
     client = MagicMock(spec=KuvaszClient)
-    client.patch_http_monitor = AsyncMock()
-    client.patch_push_monitor = AsyncMock()
-    client.patch_icmp_monitor = AsyncMock()
+    client.patch_monitor = AsyncMock()
     coordinator = KuvaszCoordinator(
         hass, client, scan_interval=30, entry_id="test_entry"
     )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
         stats={},
-        http_read_only=http_read_only,
-        push_read_only=push_read_only,
-        icmp_read_only=icmp_read_only,
+        read_only_types=frozenset(read_only_types),
     )
     return coordinator
 
@@ -87,12 +87,16 @@ class TestEnabledSwitch:
         assert len(entities) == 2
 
     async def test_no_switch_when_http_read_only(self, hass):
-        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP], http_read_only=True)
+        coordinator = _make_coordinator(
+            hass, [HTTP_MONITOR_UP], read_only_types={"http"}
+        )
         entities = await _setup_integration(hass, coordinator)
         assert len(entities) == 0
 
     async def test_no_switch_when_push_read_only(self, hass):
-        coordinator = _make_coordinator(hass, [PUSH_MONITOR_UP], push_read_only=True)
+        coordinator = _make_coordinator(
+            hass, [PUSH_MONITOR_UP], read_only_types={"push"}
+        )
         entities = await _setup_integration(hass, coordinator)
         assert len(entities) == 0
 
@@ -100,8 +104,7 @@ class TestEnabledSwitch:
         coordinator = _make_coordinator(
             hass,
             [HTTP_MONITOR_UP, PUSH_MONITOR_UP],
-            http_read_only=True,
-            push_read_only=False,
+            read_only_types={"http"},
         )
         entities = await _setup_integration(hass, coordinator)
         assert len(entities) == 1
@@ -116,8 +119,8 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_on()
 
-        coordinator.client.patch_http_monitor.assert_awaited_once_with(
-            1, {"enabled": True}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["http"], 1, {"enabled": True}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
@@ -128,8 +131,8 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_off()
 
-        coordinator.client.patch_http_monitor.assert_awaited_once_with(
-            1, {"enabled": False}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["http"], 1, {"enabled": False}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
@@ -140,8 +143,8 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_on()
 
-        coordinator.client.patch_push_monitor.assert_awaited_once_with(
-            20, {"enabled": True}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["push"], 20, {"enabled": True}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
@@ -152,8 +155,8 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_off()
 
-        coordinator.client.patch_push_monitor.assert_awaited_once_with(
-            20, {"enabled": False}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["push"], 20, {"enabled": False}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
@@ -164,8 +167,8 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_on()
 
-        coordinator.client.patch_icmp_monitor.assert_awaited_once_with(
-            30, {"enabled": True}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["icmp"], 30, {"enabled": True}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
@@ -176,13 +179,15 @@ class TestEnabledSwitchActions:
 
         await entities[0].async_turn_off()
 
-        coordinator.client.patch_icmp_monitor.assert_awaited_once_with(
-            30, {"enabled": False}
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["icmp"], 30, {"enabled": False}
         )
         coordinator.async_request_refresh.assert_awaited_once()
 
     async def test_no_switch_when_icmp_read_only(self, hass):
-        coordinator = _make_coordinator(hass, [ICMP_MONITOR_UP], icmp_read_only=True)
+        coordinator = _make_coordinator(
+            hass, [ICMP_MONITOR_UP], read_only_types={"icmp"}
+        )
         entities = await _setup_integration(hass, coordinator)
         assert len(entities) == 0
 
@@ -192,3 +197,39 @@ class TestEnabledSwitchActions:
         assert (
             entities[0].unique_id == "kuvasz_uptime_test_entry_icmp_30_enabled_switch"
         )
+
+
+class TestTcpSwitch:
+    async def test_turn_on_patches_tcp_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [{**TCP_MONITOR_UP, "enabled": False}])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_on()
+
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["tcp"], 40, {"enabled": True}
+        )
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_turn_off_patches_tcp_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_off()
+
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["tcp"], 40, {"enabled": False}
+        )
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_no_switch_when_tcp_read_only(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP], read_only_types={"tcp"})
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == 0
+
+    async def test_tcp_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert entities[0].unique_id == "kuvasz_uptime_test_entry_tcp_40_enabled_switch"

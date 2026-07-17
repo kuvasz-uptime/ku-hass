@@ -13,7 +13,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfTime
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
+from .const import (
+    DOMAIN,
+    MONITOR_TYPE_HTTP,
+    MONITOR_TYPE_ICMP,
+    MONITOR_TYPE_PUSH,
+    MONITOR_TYPE_TCP,
+)
 from .entity import KuvaszMonitorEntity
 
 if TYPE_CHECKING:
@@ -52,6 +58,21 @@ TIMESTAMP_SENSOR_DESCRIPTIONS: tuple[KuvaszTimestampSensorDescription, ...] = (
 )
 
 
+# Monitor types that record latency, and the field gating their history.
+# Push monitors record no latency at all.
+_LATENCY_HISTORY_FIELD: dict[str, str] = {
+    MONITOR_TYPE_HTTP: "latencyHistoryEnabled",
+    MONITOR_TYPE_ICMP: "metricsHistoryEnabled",
+    MONITOR_TYPE_TCP: "metricsHistoryEnabled",
+}
+
+
+def _tracks_latency(monitor: dict[str, Any]) -> bool:
+    """Return True if the monitor records a latency history to average over."""
+    field = _LATENCY_HISTORY_FIELD.get(monitor["_type"])
+    return bool(field and monitor.get(field))
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -64,10 +85,9 @@ async def async_setup_entry(
     for monitor in coordinator.data.monitors:
         monitor_type = monitor["_type"]
         entities.append(KuvaszUptimePercentageSensor(coordinator, monitor))
-        if monitor_type == MONITOR_TYPE_HTTP and monitor.get("latencyHistoryEnabled"):
+        if _tracks_latency(monitor):
             entities.append(KuvaszAvgResponseTimeSensor(coordinator, monitor))
         if monitor_type == MONITOR_TYPE_ICMP and monitor.get("metricsHistoryEnabled"):
-            entities.append(KuvaszAvgResponseTimeSensor(coordinator, monitor))
             entities.append(KuvaszAvgPacketLossSensor(coordinator, monitor))
         for desc in TIMESTAMP_SENSOR_DESCRIPTIONS:
             if monitor_type not in desc.applicable_types:
@@ -103,7 +123,7 @@ class KuvaszUptimePercentageSensor(KuvaszMonitorEntity, SensorEntity):
 
 
 class KuvaszAvgResponseTimeSensor(KuvaszMonitorEntity, SensorEntity):
-    """Sensor reporting average response time for HTTP monitors."""
+    """Sensor reporting average response time for monitors tracking latency."""
 
     _attr_native_unit_of_measurement = UnitOfTime.MILLISECONDS
     _attr_device_class = SensorDeviceClass.DURATION

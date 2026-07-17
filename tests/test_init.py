@@ -1,12 +1,21 @@
 """Tests for integration setup and stale device/entity cleanup."""
 
+from unittest.mock import AsyncMock, patch
+
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.kuvasz_uptime.__init__ import _remove_stale_devices
+from custom_components.kuvasz_uptime.api import KuvaszApiError
 from custom_components.kuvasz_uptime.const import DOMAIN
-from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
+from tests.conftest import (
+    HTTP_MONITOR_UP,
+    PUSH_MONITOR_UP,
+    SETTINGS_RESPONSE,
+    TCP_MONITOR_UP,
+)
 
 
 def _make_entry(hass, selected=None):
@@ -128,3 +137,52 @@ class TestStaleDeviceCleanup:
         dev_reg = dr.async_get(hass)
         assert dev_reg.async_get(push_dev.id) is None
         assert dr.async_entries_for_config_entry(dev_reg, entry.entry_id) == []
+
+
+class TestSetupResilience:
+    """A failed fetch must never be mistaken for 'the monitor was deleted'."""
+
+    async def test_fetch_failure_aborts_setup_and_keeps_devices(self, hass):
+        """
+        A monitor fetch error must abort setup rather than prune devices.
+
+        _remove_stale_devices permanently deletes devices (and their entities)
+        for monitors missing from the first refresh. If the client swallowed a
+        failing monitor endpoint, that whole type would look deselected and get
+        wiped from the registry, so the error has to surface instead.
+        """
+        entry = _make_entry(hass, selected=["http_1", "tcp_40"])
+        tcp_dev = _register_device(hass, entry, f"{entry.entry_id}_tcp_40")
+
+        with patch("custom_components.kuvasz_uptime.KuvaszClient") as MockClient:
+            instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
+            instance.get_all_monitors = AsyncMock(
+                side_effect=KuvaszApiError("Failed to fetch tcp monitors: 503")
+            )
+
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+        assert entry.state is ConfigEntryState.SETUP_RETRY
+        dev_reg = dr.async_get(hass)
+        assert dev_reg.async_get(tcp_dev.id) is not None
+
+    async def test_successful_setup_keeps_supported_devices(self, hass):
+        entry = _make_entry(hass, selected=["http_1", "tcp_40"])
+        tcp_dev = _register_device(hass, entry, f"{entry.entry_id}_tcp_40")
+
+        with patch("custom_components.kuvasz_uptime.KuvaszClient") as MockClient:
+            instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
+            instance.get_all_monitors = AsyncMock(
+                return_value=[HTTP_MONITOR_UP, TCP_MONITOR_UP]
+            )
+            instance.get_monitor_stats = AsyncMock(return_value={})
+
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+        assert entry.state is ConfigEntryState.LOADED
+        dev_reg = dr.async_get(hass)
+        assert dev_reg.async_get(tcp_dev.id) is not None

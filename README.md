@@ -11,12 +11,12 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 | Entity | Type | Monitors |
 |---|---|---|
-| Uptime Status | Binary sensor (`connectivity`) | HTTP, Push, ICMP |
+| Uptime Status | Binary sensor (`connectivity`) | HTTP, Push, ICMP, TCP |
 | SSL Status | Binary sensor (`safety`) | HTTP (when SSL check is enabled) |
-| Enabled | Binary sensor | HTTP, Push, ICMP |
-| Enabled | Switch | HTTP, Push, ICMP (writable monitors only) |
-| Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP |
-| Average Latency | Sensor (`ms`, `duration`) | HTTP; ICMP (when metrics history is enabled) |
+| Enabled | Binary sensor | HTTP, Push, ICMP, TCP |
+| Enabled | Switch | HTTP, Push, ICMP, TCP (writable monitors only) |
+| Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP, TCP |
+| Average Latency | Sensor (`ms`, `duration`) | HTTP; ICMP, TCP (when metrics history is enabled) |
 | Average Packet Loss | Sensor (`%`) | ICMP (when metrics history is enabled) |
 | SSL Valid Until | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
 | Last Heartbeat | Sensor (`timestamp`) | Push |
@@ -26,11 +26,12 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 | Attribute | Monitors |
 |---|---|
-| `uptime_status_started_at`, `last_uptime_check`, `failure_count_threshold`, `uptime_error`, `created_at`, `updated_at` | HTTP, Push, ICMP |
-| `next_uptime_check`, `uptime_check_interval` | HTTP, ICMP |
+| `uptime_status_started_at`, `last_uptime_check`, `failure_count_threshold`, `uptime_error`, `created_at`, `updated_at` | HTTP, Push, ICMP, TCP |
+| `next_uptime_check`, `uptime_check_interval` | HTTP, ICMP, TCP |
 | `url`, `request_method`, `follow_redirects`, `force_no_cache`, `latency_history_enabled`, `expected_status_codes`, `response_time_threshold_millis`, `expected_keyword`, `expected_keyword_case_sensitive`, `expected_keyword_negated` | HTTP |
 | `next_expected_heartbeat`, `heartbeat_interval`, `grace_period` | Push |
 | `host`, `packet_count`, `timeout_seconds`, `packet_loss_threshold`, `metrics_history_enabled` | ICMP |
+| `host`, `port`, `timeout_ms`, `latency_threshold_ms`, `metrics_history_enabled` | TCP |
 
 **SSL binary sensor** is `on` when the certificate is `INVALID` (problem detected) and `off` otherwise (`VALID` or `WILL_EXPIRE`). Extra attributes: `ssl_status`, `ssl_error`, `ssl_expiry_threshold`, `ssl_status_started_at`, `last_ssl_check`, `next_ssl_check`, `ssl_valid_until`.
 
