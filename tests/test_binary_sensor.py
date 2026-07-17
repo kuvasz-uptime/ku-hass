@@ -17,6 +17,8 @@ from tests.conftest import (
     ICMP_MONITOR_DOWN,
     ICMP_MONITOR_UP,
     PUSH_MONITOR_UP,
+    TCP_MONITOR_DOWN,
+    TCP_MONITOR_UP,
 )
 
 
@@ -379,3 +381,65 @@ class TestIcmpBinarySensor:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         assert uptime.unique_id == "kuvasz_uptime_test_entry_icmp_30_uptime_status"
+
+
+class TestTcpBinarySensor:
+    async def test_tcp_monitor_up_is_on(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is True
+
+    async def test_tcp_monitor_down_is_off(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is False
+
+    async def test_tcp_monitor_creates_uptime_and_enabled_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        assert len(entities) == 2
+
+    async def test_tcp_monitor_has_no_ssl_sensor(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ssl_entities = [e for e in entities if "ssl" in e.unique_id]
+        assert len(ssl_entities) == 0
+
+    async def test_tcp_uptime_attributes(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        attrs = uptime.extra_state_attributes
+        assert attrs["host"] == "192.168.1.2"
+        assert attrs["port"] == 5432
+        assert attrs["next_uptime_check"] == "2024-01-01T01:01:00Z"
+        assert attrs["uptime_check_interval"] == 60
+        assert attrs["timeout_ms"] == 5000
+        assert attrs["latency_threshold_ms"] == 1000
+        assert attrs["metrics_history_enabled"] is True
+        assert attrs["failure_count_threshold"] == 1
+        assert "url" not in attrs
+        assert "packet_count" not in attrs
+
+    async def test_tcp_latency_threshold_may_be_absent(self, hass):
+        """latencyThresholdMs is nullable in the API."""
+        monitor = {**TCP_MONITOR_UP, "latencyThresholdMs": None}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.extra_state_attributes["latency_threshold_ms"] is None
+
+    async def test_tcp_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.unique_id == "kuvasz_uptime_test_entry_tcp_40_uptime_status"

@@ -23,6 +23,8 @@ from tests.conftest import (
     ICMP_MONITOR_UP,
     PUSH_MONITOR_STATS,
     PUSH_MONITOR_UP,
+    TCP_MONITOR_STATS,
+    TCP_MONITOR_UP,
 )
 
 # Entity counts per monitor type (from sensor.py only):
@@ -31,11 +33,15 @@ from tests.conftest import (
 #   Push:                    uptime_pct, last_heartbeat (2)
 #   ICMP (metrics on):       uptime_pct, avg_response, avg_pkt_loss (3)
 #   ICMP (metrics disabled): uptime_pct (1)
+#   TCP (metrics on):        uptime_pct, avg_response (2)
+#   TCP (metrics disabled):  uptime_pct (1)
 HTTP_SSL_SENSOR_COUNT = 3
 HTTP_NO_SSL_SENSOR_COUNT = 2
 PUSH_SENSOR_COUNT = 2
 ICMP_METRICS_SENSOR_COUNT = 3
 ICMP_NO_METRICS_SENSOR_COUNT = 1
+TCP_METRICS_SENSOR_COUNT = 2
+TCP_NO_METRICS_SENSOR_COUNT = 1
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
@@ -353,3 +359,74 @@ class TestIcmpSensors:
 
         pkt = next(e for e in entities if "average_packet_loss" in e.unique_id)
         assert pkt.unique_id == "kuvasz_uptime_test_entry_icmp_30_average_packet_loss"
+
+
+class TestTcpSensors:
+    async def test_tcp_monitor_with_metrics_sensor_count(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == TCP_METRICS_SENSOR_COUNT
+
+    async def test_tcp_monitor_without_metrics_sensor_count(self, hass):
+        monitor = {**TCP_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == TCP_NO_METRICS_SENSOR_COUNT
+
+    async def test_tcp_uptime_percentage(self, hass):
+        stats = {"tcp_40": TCP_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.native_value == pytest.approx(99.95, abs=0.001)
+
+    async def test_tcp_avg_latency_sensor(self, hass):
+        stats = {"tcp_40": TCP_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.native_value == 15
+
+    async def test_tcp_avg_latency_not_created_when_metrics_disabled(self, hass):
+        monitor = {**TCP_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        rt_sensors = [e for e in entities if "average_latency_in_ms" in e.unique_id]
+        assert len(rt_sensors) == 0
+
+    async def test_tcp_avg_latency_none_when_no_stats(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP], stats_map={})
+        entities = await _setup_integration(hass, coordinator)
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.native_value is None
+
+    async def test_tcp_has_no_packet_loss_sensor(self, hass):
+        """Packet loss is ICMP-only; TCP stats carry no packetLossStats."""
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt_sensors = [e for e in entities if "average_packet_loss" in e.unique_id]
+        assert len(pkt_sensors) == 0
+
+    async def test_tcp_has_no_timestamp_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
+        assert len(ts_entities) == 0
+
+    async def test_tcp_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [TCP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.unique_id == "kuvasz_uptime_test_entry_tcp_40_uptime_ratio"
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.unique_id == "kuvasz_uptime_test_entry_tcp_40_average_latency_in_ms"

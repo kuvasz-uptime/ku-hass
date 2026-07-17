@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
+from .const import DOMAIN
 from .entity import KuvaszMonitorEntity
+from .monitor_types import MONITOR_TYPES_BY_KEY
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -59,11 +60,9 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
         await self._set_enabled(enabled=False)
 
     async def _set_enabled(self, *, enabled: bool) -> None:
-        client = self.coordinator.client
-        if self._monitor_type == MONITOR_TYPE_HTTP:
-            await client.patch_http_monitor(self._monitor_id, {"enabled": enabled})
-        elif self._monitor_type == MONITOR_TYPE_PUSH:
-            await client.patch_push_monitor(self._monitor_id, {"enabled": enabled})
-        elif self._monitor_type == MONITOR_TYPE_ICMP:
-            await client.patch_icmp_monitor(self._monitor_id, {"enabled": enabled})
+        await self.coordinator.client.patch_monitor(
+            MONITOR_TYPES_BY_KEY[self._monitor_type],
+            self._monitor_id,
+            {"enabled": enabled},
+        )
         await self.coordinator.async_request_refresh()

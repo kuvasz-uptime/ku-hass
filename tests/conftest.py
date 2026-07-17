@@ -200,6 +200,60 @@ ICMP_MONITOR_STATS = {
     "metricsLogs": [],
 }
 
+TCP_MONITOR_UP = {
+    "id": 40,
+    "name": "My Database",
+    "host": "192.168.1.2",
+    "port": 5432,
+    "uptimeCheckInterval": 60,
+    "timeoutMs": 5000,
+    "latencyThresholdMs": 1000,
+    "failureCountThreshold": 1,
+    "metricsHistoryEnabled": True,
+    "enabled": True,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-02T00:00:00Z",
+    "uptimeStatus": "UP",
+    "uptimeStatusStartedAt": "2024-01-01T00:00:00Z",
+    "lastUptimeCheck": "2024-01-01T01:00:00Z",
+    "nextUptimeCheck": "2024-01-01T01:01:00Z",
+    "uptimeError": None,
+    "integrations": [],
+    "effectiveIntegrations": [],
+    "statusPages": [],
+    "maintenanceWindows": [],
+    "inMaintenance": False,
+    "_type": "tcp",
+}
+
+TCP_MONITOR_DOWN = {
+    **TCP_MONITOR_UP,
+    "id": 41,
+    "name": "Down Database",
+    "uptimeStatus": "DOWN",
+}
+
+TCP_MONITOR_STATS = {
+    "id": 40,
+    "metricsHistoryEnabled": True,
+    "uptimeHistory": {
+        "period": "PT24H",
+        "incidents": 0,
+        "affectedMonitors": 0,
+        "uptimeRatio": 0.9995,
+        "totalDowntimeSeconds": 10,
+    },
+    "latencyStats": {
+        "averageLatencyInMs": 15,
+        "minLatencyInMs": 8,
+        "maxLatencyInMs": 30,
+        "p90LatencyInMs": 25,
+        "p95LatencyInMs": 28,
+        "p99LatencyInMs": 30,
+    },
+    "metricsLogs": [],
+}
+
 SETTINGS_RESPONSE = {
     "versionInfo": {
         "installedVersion": "2.1.0",
@@ -213,6 +267,7 @@ SETTINGS_RESPONSE = {
             "areStatusPagesReadOnly": False,
             "arePushMonitorsReadOnly": False,
             "areIcmpMonitorsReadOnly": False,
+            "areTcpMonitorsReadOnly": False,
         },
         "updateChecksEnabled": True,
     },
@@ -226,16 +281,30 @@ SETTINGS_RESPONSE_READ_ONLY = {
             "areStatusPagesReadOnly": True,
             "arePushMonitorsReadOnly": True,
             "areIcmpMonitorsReadOnly": True,
+            "areTcpMonitorsReadOnly": True,
         }
     },
 }
 
+# An instance predating both ICMP and TCP monitors.
 SETTINGS_RESPONSE_NO_ICMP = {
     "app": {
         "editabilityState": {
             "areHttpMonitorsReadOnly": False,
             "areStatusPagesReadOnly": False,
             "arePushMonitorsReadOnly": False,
+        }
+    },
+}
+
+# An instance that knows about ICMP monitors, but predates TCP ones.
+SETTINGS_RESPONSE_NO_TCP = {
+    "app": {
+        "editabilityState": {
+            "areHttpMonitorsReadOnly": False,
+            "areStatusPagesReadOnly": False,
+            "arePushMonitorsReadOnly": False,
+            "areIcmpMonitorsReadOnly": False,
         }
     },
 }

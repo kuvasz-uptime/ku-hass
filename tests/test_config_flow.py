@@ -15,7 +15,7 @@ from custom_components.kuvasz_uptime.const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP
+from tests.conftest import HTTP_MONITOR_UP, PUSH_MONITOR_UP, SETTINGS_RESPONSE
 
 CREDENTIALS = {
     "name": "My Kuvasz",
@@ -49,7 +49,7 @@ async def _complete_flow(hass, credentials=None, selected=None, monitors=None):
         "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
     ) as MockClient:
         instance = MockClient.return_value
-        instance.verify_connection = AsyncMock(return_value=True)
+        instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
         instance.get_all_monitors = AsyncMock(return_value=monitors)
 
         result = await _start_flow(hass)
@@ -75,7 +75,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -93,9 +93,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(
-                side_effect=KuvaszAuthError("bad key")
-            )
+            instance.get_settings = AsyncMock(side_effect=KuvaszAuthError("bad key"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -114,9 +112,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(
-                side_effect=KuvaszApiError("timeout")
-            )
+            instance.get_settings = AsyncMock(side_effect=KuvaszApiError("timeout"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -132,7 +128,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(side_effect=Exception("unexpected"))
+            instance.get_settings = AsyncMock(side_effect=Exception("unexpected"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -150,7 +146,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(side_effect=KuvaszApiError("down"))
+            instance.get_settings = AsyncMock(side_effect=KuvaszApiError("down"))
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -164,7 +160,7 @@ class TestConfigFlowStep1:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await hass.config_entries.flow.async_configure(
@@ -180,7 +176,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -236,7 +232,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -255,7 +251,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -275,7 +271,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -296,7 +292,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -314,7 +310,7 @@ class TestConfigFlowStep2:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=[])
 
             result = await _start_flow(hass)
@@ -344,7 +340,7 @@ class TestConfigFlowScanInterval:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -375,7 +371,7 @@ class TestConfigFlowVerifySSL:
             ) as MockClient,
         ):
             instance = MockClient.return_value
-            instance.verify_connection = AsyncMock(return_value=True)
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
 
             result = await _start_flow(hass)
@@ -400,6 +396,7 @@ class TestOptionsFlow:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=monitors)
             return await hass.config_entries.options.async_init(entry.entry_id)
 
@@ -433,6 +430,7 @@ class TestOptionsFlow:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)
             result = await hass.config_entries.options.async_configure(
@@ -458,6 +456,7 @@ class TestOptionsFlow:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(side_effect=KuvaszApiError("down"))
             result = await hass.config_entries.options.async_init(entry.entry_id)
 
@@ -490,6 +489,7 @@ class TestOptionsFlow:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)
             result = await hass.config_entries.options.async_configure(
@@ -511,6 +511,7 @@ class TestOptionsFlow:
             "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
         ) as MockClient:
             instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
             instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
             result = await hass.config_entries.options.async_init(entry.entry_id)
             result = await hass.config_entries.options.async_configure(

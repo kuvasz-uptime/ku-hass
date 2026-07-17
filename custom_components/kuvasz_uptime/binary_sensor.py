@@ -14,6 +14,7 @@ from .const import (
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
+    MONITOR_TYPE_TCP,
     SSL_STATUS_INVALID,
     UPTIME_STATUS_UP,
 )
@@ -116,6 +117,18 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
                     "packet_count": data.get("packetCount"),
                     "timeout_seconds": data.get("timeoutSeconds"),
                     "packet_loss_threshold": data.get("packetLossThreshold"),
+                    "metrics_history_enabled": data.get("metricsHistoryEnabled"),
+                }
+            )
+        elif self._monitor_type == MONITOR_TYPE_TCP:
+            attrs.update(
+                {
+                    "host": data.get("host"),
+                    "port": data.get("port"),
+                    "next_uptime_check": data.get("nextUptimeCheck"),
+                    "uptime_check_interval": data.get("uptimeCheckInterval"),
+                    "timeout_ms": data.get("timeoutMs"),
+                    "latency_threshold_ms": data.get("latencyThresholdMs"),
                     "metrics_history_enabled": data.get("metricsHistoryEnabled"),
                 }
             )

@@ -37,6 +37,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
     STATS_PERIOD_OPTIONS,
 )
+from .monitor_types import supported_monitor_types
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -152,8 +153,10 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
                 client = KuvaszClient(host=host, api_key=api_key, session=session)
 
                 try:
-                    await client.verify_connection()
-                    self._monitors = await client.get_all_monitors()
+                    settings = await client.get_settings()
+                    self._monitors = await client.get_all_monitors(
+                        supported_monitor_types(settings)
+                    )
                 except KuvaszAuthError:
                     errors["base"] = "invalid_auth"
                 except KuvaszApiError:
@@ -234,7 +237,8 @@ class KuvaszOptionsFlowHandler(OptionsFlow):
             session=session,
         )
         try:
-            monitors = await client.get_all_monitors()
+            settings = await client.get_settings()
+            monitors = await client.get_all_monitors(supported_monitor_types(settings))
         except KuvaszApiError:
             return self.async_abort(reason="cannot_connect")
 

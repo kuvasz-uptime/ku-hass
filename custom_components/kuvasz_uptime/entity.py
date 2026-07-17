@@ -8,8 +8,9 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import DOMAIN, MONITOR_TYPE_HTTP, MONITOR_TYPE_ICMP, MONITOR_TYPE_PUSH
+from .const import DOMAIN
 from .coordinator import KuvaszCoordinator
+from .monitor_types import MONITOR_TYPES_BY_KEY
 
 
 class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
@@ -58,12 +59,8 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device registry information for this monitor."""
-        type_labels = {
-            MONITOR_TYPE_HTTP: "HTTP",
-            MONITOR_TYPE_PUSH: "Push",
-            MONITOR_TYPE_ICMP: "ICMP",
-        }
-        type_label = type_labels.get(self._monitor_type, self._monitor_type.upper())
+        spec = MONITOR_TYPES_BY_KEY.get(self._monitor_type)
+        type_label = spec.device_label if spec else self._monitor_type.upper()
         monitor_ident = f"{self._instance_key}_{self._monitor_type}_{self._monitor_id}"
         return DeviceInfo(
             identifiers={(DOMAIN, monitor_ident)},
