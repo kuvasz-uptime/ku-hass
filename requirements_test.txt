@@ -1,5 +1,5 @@
 aiohttp
 pytest
 pytest-asyncio
-pytest-homeassistant-custom-component==0.13.346
+pytest-homeassistant-custom-component==0.13.347
 ruff==0.15.22
