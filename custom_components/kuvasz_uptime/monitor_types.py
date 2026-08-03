@@ -6,10 +6,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from .const import (
+    API_DNS_MONITORS,
     API_HTTP_MONITORS,
     API_ICMP_MONITORS,
     API_PUSH_MONITORS,
     API_TCP_MONITORS,
+    MONITOR_TYPE_DNS,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -58,6 +60,13 @@ MONITOR_TYPES: tuple[MonitorType, ...] = (
         api_path=API_TCP_MONITORS,
         device_label="TCP",
         read_only_setting="areTcpMonitorsReadOnly",
+        optional=True,
+    ),
+    MonitorType(
+        key=MONITOR_TYPE_DNS,
+        api_path=API_DNS_MONITORS,
+        device_label="DNS",
+        read_only_setting="areDnsMonitorsReadOnly",
         optional=True,
     ),
 )

@@ -8,6 +8,7 @@ from custom_components.kuvasz_uptime.monitor_types import (
 )
 from tests.conftest import (
     SETTINGS_RESPONSE,
+    SETTINGS_RESPONSE_NO_DNS,
     SETTINGS_RESPONSE_NO_ICMP,
     SETTINGS_RESPONSE_NO_TCP,
     SETTINGS_RESPONSE_READ_ONLY,
@@ -31,9 +32,10 @@ class TestRegistry:
         assert MONITOR_TYPES_BY_KEY["http"].optional is False
         assert MONITOR_TYPES_BY_KEY["push"].optional is False
 
-    def test_icmp_and_tcp_are_optional(self):
+    def test_icmp_tcp_and_dns_are_optional(self):
         assert MONITOR_TYPES_BY_KEY["icmp"].optional is True
         assert MONITOR_TYPES_BY_KEY["tcp"].optional is True
+        assert MONITOR_TYPES_BY_KEY["dns"].optional is True
 
 
 class TestSupportedMonitorTypes:
@@ -43,16 +45,25 @@ class TestSupportedMonitorTypes:
             "push",
             "icmp",
             "tcp",
+            "dns",
         }
 
-    def test_instance_without_tcp(self):
+    def test_instance_without_dns(self):
+        assert _keys(supported_monitor_types(SETTINGS_RESPONSE_NO_DNS)) == {
+            "http",
+            "push",
+            "icmp",
+            "tcp",
+        }
+
+    def test_instance_without_tcp_or_dns(self):
         assert _keys(supported_monitor_types(SETTINGS_RESPONSE_NO_TCP)) == {
             "http",
             "push",
             "icmp",
         }
 
-    def test_legacy_instance_without_icmp_or_tcp(self):
+    def test_legacy_instance_without_icmp_tcp_or_dns(self):
         assert _keys(supported_monitor_types(SETTINGS_RESPONSE_NO_ICMP)) == {
             "http",
             "push",
@@ -65,6 +76,7 @@ class TestSupportedMonitorTypes:
             "push",
             "icmp",
             "tcp",
+            "dns",
         }
 
     def test_settings_without_editability_falls_back_to_required_types(self):
@@ -80,7 +92,7 @@ class TestReadOnlyMonitorTypes:
 
     def test_every_type_read_only(self):
         assert read_only_monitor_types(SETTINGS_RESPONSE_READ_ONLY) == frozenset(
-            {"http", "push", "icmp", "tcp"}
+            {"http", "push", "icmp", "tcp", "dns"}
         )
 
     def test_absent_flags_are_not_read_only(self):

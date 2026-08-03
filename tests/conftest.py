@@ -254,6 +254,76 @@ TCP_MONITOR_STATS = {
     "metricsLogs": [],
 }
 
+DNS_MONITOR_UP = {
+    "id": 50,
+    "name": "My Domain",
+    "host": "example.com",
+    "resolverHost": "1.1.1.1",
+    "resolverPort": 53,
+    "transport": "UDP",
+    "recordMatchers": [
+        {"recordType": "A", "matchType": "CONTAINS", "value": "93.184.216.34"},
+        {"recordType": "MX", "matchType": "EXACT", "value": "10 mail.example.com"},
+    ],
+    "expectedResponseCode": "NOERROR",
+    "driftDetectionEnabled": True,
+    "driftRecordTypes": ["NS", "MX"],
+    "uptimeCheckInterval": 60,
+    "timeoutMs": 5000,
+    "latencyThresholdMs": 1000,
+    "failureCountThreshold": 1,
+    "metricsHistoryEnabled": True,
+    "enabled": True,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-02T00:00:00Z",
+    "uptimeStatus": "UP",
+    "uptimeStatusStartedAt": "2024-01-01T00:00:00Z",
+    "lastUptimeCheck": "2024-01-01T01:00:00Z",
+    "nextUptimeCheck": "2024-01-01T01:01:00Z",
+    "uptimeError": None,
+    "integrations": [],
+    "effectiveIntegrations": [],
+    "statusPages": [],
+    "maintenanceWindows": [],
+    "inMaintenance": False,
+    "_type": "dns",
+}
+
+# Also covers the nullable fields: no custom resolver, no latency threshold,
+# and a monitor that asserts nothing (plain A lookup).
+DNS_MONITOR_DOWN = {
+    **DNS_MONITOR_UP,
+    "id": 51,
+    "name": "Down Domain",
+    "resolverHost": None,
+    "latencyThresholdMs": None,
+    "recordMatchers": [],
+    "driftDetectionEnabled": False,
+    "driftRecordTypes": [],
+    "uptimeStatus": "DOWN",
+}
+
+DNS_MONITOR_STATS = {
+    "id": 50,
+    "metricsHistoryEnabled": True,
+    "uptimeHistory": {
+        "period": "PT24H",
+        "incidents": 0,
+        "affectedMonitors": 0,
+        "uptimeRatio": 0.9998,
+        "totalDowntimeSeconds": 5,
+    },
+    "latencyStats": {
+        "averageLatencyInMs": 12,
+        "minLatencyInMs": 5,
+        "maxLatencyInMs": 40,
+        "p90LatencyInMs": 20,
+        "p95LatencyInMs": 30,
+        "p99LatencyInMs": 40,
+    },
+    "metricsLogs": [],
+}
+
 SETTINGS_RESPONSE = {
     "versionInfo": {
         "installedVersion": "2.1.0",
@@ -268,6 +338,7 @@ SETTINGS_RESPONSE = {
             "arePushMonitorsReadOnly": False,
             "areIcmpMonitorsReadOnly": False,
             "areTcpMonitorsReadOnly": False,
+            "areDnsMonitorsReadOnly": False,
         },
         "updateChecksEnabled": True,
     },
@@ -282,11 +353,12 @@ SETTINGS_RESPONSE_READ_ONLY = {
             "arePushMonitorsReadOnly": True,
             "areIcmpMonitorsReadOnly": True,
             "areTcpMonitorsReadOnly": True,
+            "areDnsMonitorsReadOnly": True,
         }
     },
 }
 
-# An instance predating both ICMP and TCP monitors.
+# An instance predating ICMP, TCP and DNS monitors.
 SETTINGS_RESPONSE_NO_ICMP = {
     "app": {
         "editabilityState": {
@@ -297,7 +369,7 @@ SETTINGS_RESPONSE_NO_ICMP = {
     },
 }
 
-# An instance that knows about ICMP monitors, but predates TCP ones.
+# An instance that knows about ICMP monitors, but predates TCP and DNS ones.
 SETTINGS_RESPONSE_NO_TCP = {
     "app": {
         "editabilityState": {
@@ -305,6 +377,19 @@ SETTINGS_RESPONSE_NO_TCP = {
             "areStatusPagesReadOnly": False,
             "arePushMonitorsReadOnly": False,
             "areIcmpMonitorsReadOnly": False,
+        }
+    },
+}
+
+# An instance that knows about ICMP and TCP monitors, but predates DNS ones.
+SETTINGS_RESPONSE_NO_DNS = {
+    "app": {
+        "editabilityState": {
+            "areHttpMonitorsReadOnly": False,
+            "areStatusPagesReadOnly": False,
+            "arePushMonitorsReadOnly": False,
+            "areIcmpMonitorsReadOnly": False,
+            "areTcpMonitorsReadOnly": False,
         }
     },
 }

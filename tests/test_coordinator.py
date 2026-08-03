@@ -7,6 +7,8 @@ from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
 )
 from tests.conftest import (
+    DNS_MONITOR_STATS,
+    DNS_MONITOR_UP,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_UP,
     ICMP_MONITOR_STATS,
@@ -14,6 +16,7 @@ from tests.conftest import (
     PUSH_MONITOR_STATS,
     PUSH_MONITOR_UP,
     SETTINGS_RESPONSE,
+    SETTINGS_RESPONSE_NO_DNS,
     SETTINGS_RESPONSE_NO_ICMP,
     SETTINGS_RESPONSE_NO_TCP,
     TCP_MONITOR_STATS,
@@ -25,6 +28,7 @@ DEFAULT_STATS = {
     "push": PUSH_MONITOR_STATS,
     "icmp": ICMP_MONITOR_STATS,
     "tcp": TCP_MONITOR_STATS,
+    "dns": DNS_MONITOR_STATS,
 }
 
 
@@ -245,7 +249,7 @@ class TestIcmpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp"}
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
 
 
 class TestTcpCoordinator:
@@ -328,5 +332,89 @@ class TestTcpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp"}
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
         assert "tcp_40" in coordinator.data.stats
+
+
+class TestDnsCoordinator:
+    async def test_dns_stats_fetched(self, hass):
+        client = _make_client(
+            monitors=[DNS_MONITOR_UP], stats={"dns": DNS_MONITOR_STATS}
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        stats = coordinator.data.monitor_stats("dns", 50)
+        assert stats["uptimeHistory"]["uptimeRatio"] == 0.9998
+        assert stats["latencyStats"]["averageLatencyInMs"] == 12
+
+    async def test_dns_read_only_flag_from_settings(self, hass):
+        from tests.conftest import SETTINGS_RESPONSE_READ_ONLY
+
+        client = _make_client(
+            monitors=[DNS_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "dns" in coordinator.data.read_only_types
+
+    async def test_dns_not_read_only_by_default(self, hass):
+        client = _make_client(monitors=[DNS_MONITOR_UP])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "dns" not in coordinator.data.read_only_types
+
+    async def test_is_read_only_dns(self, hass):
+        client = _make_client(monitors=[])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        await coordinator.async_refresh()
+        coordinator.data.read_only_types = frozenset({"dns"})
+
+        assert coordinator.data.is_read_only("dns") is True
+
+    async def test_dns_skipped_when_not_in_settings(self, hass):
+        """A Kuvasz predating DNS monitors is never asked for /dns-monitors.
+
+        This is the backward-compatibility guarantee: the endpoint 404s on
+        those instances, so probing it would fail every refresh.
+        """
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, TCP_MONITOR_UP],
+            settings=SETTINGS_RESPONSE_NO_DNS,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is True
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp"}
+        assert "dns" not in coordinator.data.read_only_types
+
+    async def test_dns_fetch_failure_fails_the_update(self, hass):
+        """A supported type that errors is a real failure, not absent support."""
+        client = _make_client(
+            monitors_error=KuvaszApiError("Failed to fetch dns monitors: 503"),
+            settings=SETTINGS_RESPONSE,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is False
+
+    async def test_dns_fetched_when_in_settings(self, hass):
+        """Instances with areDnsMonitorsReadOnly should fetch DNS monitors."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, DNS_MONITOR_UP], settings=SETTINGS_RESPONSE
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
+        assert "dns_50" in coordinator.data.stats

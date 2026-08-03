@@ -14,6 +14,8 @@ from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinatorData,
 )
 from tests.conftest import (
+    DNS_MONITOR_STATS,
+    DNS_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
     HTTP_MONITOR_STATS,
@@ -35,6 +37,8 @@ from tests.conftest import (
 #   ICMP (metrics disabled): uptime_pct (1)
 #   TCP (metrics on):        uptime_pct, avg_response (2)
 #   TCP (metrics disabled):  uptime_pct (1)
+#   DNS (metrics on):        uptime_pct, avg_response (2)
+#   DNS (metrics disabled):  uptime_pct (1)
 HTTP_SSL_SENSOR_COUNT = 3
 HTTP_NO_SSL_SENSOR_COUNT = 2
 PUSH_SENSOR_COUNT = 2
@@ -42,6 +46,8 @@ ICMP_METRICS_SENSOR_COUNT = 3
 ICMP_NO_METRICS_SENSOR_COUNT = 1
 TCP_METRICS_SENSOR_COUNT = 2
 TCP_NO_METRICS_SENSOR_COUNT = 1
+DNS_METRICS_SENSOR_COUNT = 2
+DNS_NO_METRICS_SENSOR_COUNT = 1
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
@@ -430,3 +436,74 @@ class TestTcpSensors:
 
         rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
         assert rt.unique_id == "kuvasz_uptime_test_entry_tcp_40_average_latency_in_ms"
+
+
+class TestDnsSensors:
+    async def test_dns_monitor_with_metrics_sensor_count(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == DNS_METRICS_SENSOR_COUNT
+
+    async def test_dns_monitor_without_metrics_sensor_count(self, hass):
+        monitor = {**DNS_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == DNS_NO_METRICS_SENSOR_COUNT
+
+    async def test_dns_uptime_percentage(self, hass):
+        stats = {"dns_50": DNS_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.native_value == pytest.approx(99.98, abs=0.001)
+
+    async def test_dns_avg_latency_sensor(self, hass):
+        stats = {"dns_50": DNS_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.native_value == 12
+
+    async def test_dns_avg_latency_not_created_when_metrics_disabled(self, hass):
+        monitor = {**DNS_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        rt_sensors = [e for e in entities if "average_latency_in_ms" in e.unique_id]
+        assert len(rt_sensors) == 0
+
+    async def test_dns_avg_latency_none_when_no_stats(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP], stats_map={})
+        entities = await _setup_integration(hass, coordinator)
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.native_value is None
+
+    async def test_dns_has_no_packet_loss_sensor(self, hass):
+        """Packet loss is ICMP-only; DNS stats carry no packetLossStats."""
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt_sensors = [e for e in entities if "average_packet_loss" in e.unique_id]
+        assert len(pkt_sensors) == 0
+
+    async def test_dns_has_no_timestamp_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
+        assert len(ts_entities) == 0
+
+    async def test_dns_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.unique_id == "kuvasz_uptime_test_entry_dns_50_uptime_ratio"
+
+        rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
+        assert rt.unique_id == "kuvasz_uptime_test_entry_dns_50_average_latency_in_ms"

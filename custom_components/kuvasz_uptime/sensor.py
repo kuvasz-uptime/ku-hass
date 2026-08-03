@@ -15,6 +15,7 @@ from homeassistant.const import PERCENTAGE, UnitOfTime
 
 from .const import (
     DOMAIN,
+    MONITOR_TYPE_DNS,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -64,6 +65,7 @@ _LATENCY_HISTORY_FIELD: dict[str, str] = {
     MONITOR_TYPE_HTTP: "latencyHistoryEnabled",
     MONITOR_TYPE_ICMP: "metricsHistoryEnabled",
     MONITOR_TYPE_TCP: "metricsHistoryEnabled",
+    MONITOR_TYPE_DNS: "metricsHistoryEnabled",
 }
 
 
