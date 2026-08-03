@@ -61,6 +61,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
         self,
         hass: HomeAssistant,
         client: KuvaszClient,
+        *,
         scan_interval: int,
         selected_monitors: list[str] | None = None,
         stats_period: str = DEFAULT_STATS_PERIOD,
