@@ -1,7 +1,7 @@
 # Kuvasz Uptime - Home Assistant Integration
 
 [![CI](https://github.com/kuvasz-uptime/ku-hass/actions/workflows/tests.yml/badge.svg)](https://github.com/kuvasz-uptime/ku-hass/actions/workflows/tests.yml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/integration)
 
 A [Home Assistant](https://www.home-assistant.io/) integration for [Kuvasz Uptime](https://kuvasz-uptime.dev) - a self-hosted, open-source uptime and SSL monitoring service.
 
@@ -52,11 +52,14 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 ### Via HACS (recommended)
 
-1. In Home Assistant, open **HACS → Integrations**.
-2. Click the three-dot menu → **Custom repositories**.
-3. Add `https://github.com/kuvasz-uptime/ku-hass` with category **Integration**.
-4. Search for **Kuvasz Uptime** and install it.
-5. Restart Home Assistant.
+This integration is available in the default HACS store - no custom repository needed.
+
+1. In Home Assistant, open **HACS**.
+2. Search for **Kuvasz Uptime** and open it.
+3. Click **Download**.
+4. Restart Home Assistant.
+
+Or use the direct link: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kuvasz-uptime&repository=ku-hass&category=integration)
 
 ### Manual
 
