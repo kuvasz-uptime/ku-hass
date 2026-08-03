@@ -68,32 +68,11 @@
       "average_packet_loss": {
         "name": "Average Packet Loss"
       },
-      "uptime_status_started_at": {
-        "name": "Uptime Status Started At"
-      },
-      "last_uptime_check": {
-        "name": "Last Uptime Check"
-      },
-      "next_uptime_check": {
-        "name": "Next Uptime Check"
-      },
-      "ssl_status_started_at": {
-        "name": "SSL Status Started At"
-      },
-      "last_ssl_check": {
-        "name": "Last SSL Check"
-      },
-      "next_ssl_check": {
-        "name": "Next SSL Check"
-      },
       "ssl_valid_until": {
         "name": "SSL Valid Until"
       },
       "last_heartbeat": {
         "name": "Last Heartbeat"
-      },
-      "next_expected_heartbeat": {
-        "name": "Next Expected Heartbeat"
       }
     },
     "switch": {
