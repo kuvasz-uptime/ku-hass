@@ -11,6 +11,7 @@ from homeassistant.components.binary_sensor import (
 
 from .const import (
     DOMAIN,
+    MONITOR_TYPE_DNS,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -26,6 +27,18 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .coordinator import KuvaszCoordinator
+
+
+def _format_record_matchers(matchers: list[dict[str, Any]] | None) -> list[str]:
+    """Render DNS record matchers as readable "TYPE MATCH value" strings."""
+    return [
+        " ".join(
+            str(part)
+            for part in (m.get("recordType"), m.get("matchType"), m.get("value"))
+            if part is not None
+        )
+        for m in matchers or []
+    ]
 
 
 async def async_setup_entry(
@@ -125,6 +138,26 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
                 {
                     "host": data.get("host"),
                     "port": data.get("port"),
+                    "next_uptime_check": data.get("nextUptimeCheck"),
+                    "uptime_check_interval": data.get("uptimeCheckInterval"),
+                    "timeout_ms": data.get("timeoutMs"),
+                    "latency_threshold_ms": data.get("latencyThresholdMs"),
+                    "metrics_history_enabled": data.get("metricsHistoryEnabled"),
+                }
+            )
+        elif self._monitor_type == MONITOR_TYPE_DNS:
+            attrs.update(
+                {
+                    "host": data.get("host"),
+                    "resolver_host": data.get("resolverHost"),
+                    "resolver_port": data.get("resolverPort"),
+                    "transport": data.get("transport"),
+                    "record_matchers": _format_record_matchers(
+                        data.get("recordMatchers")
+                    ),
+                    "expected_response_code": data.get("expectedResponseCode"),
+                    "drift_detection_enabled": data.get("driftDetectionEnabled"),
+                    "drift_record_types": data.get("driftRecordTypes"),
                     "next_uptime_check": data.get("nextUptimeCheck"),
                     "uptime_check_interval": data.get("uptimeCheckInterval"),
                     "timeout_ms": data.get("timeoutMs"),

@@ -11,6 +11,8 @@ from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinatorData,
 )
 from tests.conftest import (
+    DNS_MONITOR_DOWN,
+    DNS_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
     HTTP_MONITOR_UP,
@@ -443,3 +445,100 @@ class TestTcpBinarySensor:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         assert uptime.unique_id == "kuvasz_uptime_test_entry_tcp_40_uptime_status"
+
+
+class TestDnsBinarySensor:
+    async def test_dns_monitor_up_is_on(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is True
+
+    async def test_dns_monitor_down_is_off(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is False
+
+    async def test_dns_monitor_creates_uptime_and_enabled_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        assert len(entities) == 2
+
+    async def test_dns_monitor_has_no_ssl_sensor(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ssl_entities = [e for e in entities if "ssl" in e.unique_id]
+        assert len(ssl_entities) == 0
+
+    async def test_dns_uptime_attributes(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        attrs = uptime.extra_state_attributes
+        assert attrs["host"] == "example.com"
+        assert attrs["resolver_host"] == "1.1.1.1"
+        assert attrs["resolver_port"] == 53
+        assert attrs["transport"] == "UDP"
+        assert attrs["expected_response_code"] == "NOERROR"
+        assert attrs["drift_detection_enabled"] is True
+        assert attrs["drift_record_types"] == ["NS", "MX"]
+        assert attrs["next_uptime_check"] == "2024-01-01T01:01:00Z"
+        assert attrs["uptime_check_interval"] == 60
+        assert attrs["timeout_ms"] == 5000
+        assert attrs["latency_threshold_ms"] == 1000
+        assert attrs["metrics_history_enabled"] is True
+        assert attrs["failure_count_threshold"] == 1
+        assert "url" not in attrs
+        assert "port" not in attrs
+        assert "packet_count" not in attrs
+
+    async def test_dns_record_matchers_are_flattened(self, hass):
+        """Matchers render as strings so templates can read them directly."""
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.extra_state_attributes["record_matchers"] == [
+            "A CONTAINS 93.184.216.34",
+            "MX EXACT 10 mail.example.com",
+        ]
+
+    async def test_dns_record_matchers_may_be_empty(self, hass):
+        """An empty matcher list means a plain A lookup, not an error."""
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.extra_state_attributes["record_matchers"] == []
+
+    async def test_dns_record_matchers_tolerate_missing_keys(self, hass):
+        """A matcher shape the integration does not know must not crash it."""
+        monitor = {**DNS_MONITOR_UP, "recordMatchers": [{"recordType": "TXT"}, {}]}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.extra_state_attributes["record_matchers"] == ["TXT", ""]
+
+    async def test_dns_nullable_fields_may_be_absent(self, hass):
+        """resolverHost and latencyThresholdMs are nullable in the API."""
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        attrs = uptime.extra_state_attributes
+        assert attrs["resolver_host"] is None
+        assert attrs["latency_threshold_ms"] is None
+
+    async def test_dns_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.unique_id == "kuvasz_uptime_test_entry_dns_50_uptime_status"

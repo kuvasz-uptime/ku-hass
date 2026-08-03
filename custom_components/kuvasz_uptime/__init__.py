@@ -50,7 +50,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     selected_monitors = _entry_value(entry, CONF_SELECTED_MONITORS)
     stats_period = _entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval, selected_monitors, stats_period, entry.entry_id
+        hass,
+        client,
+        scan_interval=scan_interval,
+        selected_monitors=selected_monitors,
+        stats_period=stats_period,
+        entry_id=entry.entry_id,
     )
     await coordinator.async_config_entry_first_refresh()
 

@@ -9,29 +9,34 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 
 ## Features
 
-| Entity | Type | Monitors |
-|---|---|---|
-| Uptime Status | Binary sensor (`connectivity`) | HTTP, Push, ICMP, TCP |
-| SSL Status | Binary sensor (`safety`) | HTTP (when SSL check is enabled) |
-| Enabled | Binary sensor | HTTP, Push, ICMP, TCP |
-| Enabled | Switch | HTTP, Push, ICMP, TCP (writable monitors only) |
-| Uptime Ratio | Sensor (`%`) | HTTP, Push, ICMP, TCP |
-| Average Latency | Sensor (`ms`, `duration`) | HTTP; ICMP, TCP (when metrics history is enabled) |
-| Average Packet Loss | Sensor (`%`) | ICMP (when metrics history is enabled) |
-| SSL Valid Until | Sensor (`timestamp`) | HTTP (when SSL check is enabled) |
-| Last Heartbeat | Sensor (`timestamp`) | Push |
-| Kuvasz Update | Update | Integration (when update checks are enabled) |
+| Entity              | Type                           | Monitors                                               |
+|---------------------|--------------------------------|--------------------------------------------------------|
+| Uptime Status       | Binary sensor (`connectivity`) | HTTP, Push, ICMP, TCP, DNS                             |
+| SSL Status          | Binary sensor (`safety`)       | HTTP (when SSL check is enabled)                       |
+| Enabled             | Binary sensor                  | HTTP, Push, ICMP, TCP, DNS                             |
+| Enabled             | Switch                         | HTTP, Push, ICMP, TCP, DNS (writable monitors only)    |
+| Uptime Ratio        | Sensor (`%`)                   | HTTP, Push, ICMP, TCP, DNS                             |
+| Average Latency     | Sensor (`ms`, `duration`)      | HTTP; ICMP, TCP, DNS (when metrics history is enabled) |
+| Average Packet Loss | Sensor (`%`)                   | ICMP (when metrics history is enabled)                 |
+| SSL Valid Until     | Sensor (`timestamp`)           | HTTP (when SSL check is enabled)                       |
+| Last Heartbeat      | Sensor (`timestamp`)           | Push                                                   |
+| Kuvasz Update       | Update                         | Integration (when update checks are enabled)           |
 
 **Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise. Extra attributes:
 
-| Attribute | Monitors |
-|---|---|
-| `uptime_status_started_at`, `last_uptime_check`, `failure_count_threshold`, `uptime_error`, `created_at`, `updated_at` | HTTP, Push, ICMP, TCP |
-| `next_uptime_check`, `uptime_check_interval` | HTTP, ICMP, TCP |
-| `url`, `request_method`, `follow_redirects`, `force_no_cache`, `latency_history_enabled`, `expected_status_codes`, `response_time_threshold_millis`, `expected_keyword`, `expected_keyword_case_sensitive`, `expected_keyword_negated` | HTTP |
-| `next_expected_heartbeat`, `heartbeat_interval`, `grace_period` | Push |
-| `host`, `packet_count`, `timeout_seconds`, `packet_loss_threshold`, `metrics_history_enabled` | ICMP |
-| `host`, `port`, `timeout_ms`, `latency_threshold_ms`, `metrics_history_enabled` | TCP |
+| Attribute                                                                                                                                                                                                                              | Monitors                   |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
+| `uptime_status_started_at`, `last_uptime_check`, `failure_count_threshold`, `uptime_error`, `created_at`, `updated_at`                                                                                                                 | HTTP, Push, ICMP, TCP, DNS |
+| `next_uptime_check`, `uptime_check_interval`                                                                                                                                                                                           | HTTP, ICMP, TCP, DNS       |
+| `url`, `request_method`, `follow_redirects`, `force_no_cache`, `latency_history_enabled`, `expected_status_codes`, `response_time_threshold_millis`, `expected_keyword`, `expected_keyword_case_sensitive`, `expected_keyword_negated` | HTTP                       |
+| `next_expected_heartbeat`, `heartbeat_interval`, `grace_period`                                                                                                                                                                        | Push                       |
+| `host`, `packet_count`, `timeout_seconds`, `packet_loss_threshold`, `metrics_history_enabled`                                                                                                                                          | ICMP                       |
+| `host`, `port`, `timeout_ms`, `latency_threshold_ms`, `metrics_history_enabled`                                                                                                                                                        | TCP                        |
+| `host`, `resolver_host`, `resolver_port`, `transport`, `record_matchers`, `expected_response_code`, `drift_detection_enabled`, `drift_record_types`, `timeout_ms`, `latency_threshold_ms`, `metrics_history_enabled`                   | DNS                        |
+
+For DNS monitors, `record_matchers` is a list of readable `"<record type> <match type> <value>"` strings, e.g. `["A CONTAINS 93.184.216.34"]`. An empty list means the monitor asserts nothing about the records themselves and only checks that the lookup returns `expected_response_code`: with the default `NOERROR` that makes it `UP` whenever the name resolves, while a monitor expecting `NXDOMAIN`, `SERVFAIL` or `REFUSED` (which Kuvasz only allows with no matchers) is `UP` in exactly the opposite case.
+
+`drift_detection_enabled` and `drift_record_types` are configuration only - drift is reported by your Kuvasz instance's notification integrations and never changes the `UP`/`DOWN` state. An empty `drift_record_types` does not mean drift detection is watching nothing: while enabled, it watches exactly the record types the matchers cover. Listing types there replaces that default, which is how a monitor watches a record it does not assert on.
 
 **SSL binary sensor** is `on` when the certificate is `INVALID` (problem detected) and `off` otherwise (`VALID` or `WILL_EXPIRE`). Extra attributes: `ssl_status`, `ssl_error`, `ssl_expiry_threshold`, `ssl_status_started_at`, `last_ssl_check`, `next_ssl_check`, `ssl_valid_until`.
 
