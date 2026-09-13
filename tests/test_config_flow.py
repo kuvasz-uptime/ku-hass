@@ -423,6 +423,34 @@ class TestOptionsFlow:
         sel_key = next(k for k in schema_dict if str(k) == CONF_SELECTED_MONITORS)
         assert sel_key.default() == ["http_1"]
 
+    async def test_options_flow_drops_deleted_monitors_from_selection(self, hass):
+        entry = await self._setup_entry(hass, selected=["http_1", "push_20"])
+        remaining = [HTTP_MONITOR_UP]
+
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
+            instance = MockClient.return_value
+            instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
+            instance.get_all_monitors = AsyncMock(return_value=remaining)
+            result = await hass.config_entries.options.async_init(entry.entry_id)
+
+            schema_dict = result["data_schema"].schema
+            sel_key = next(k for k in schema_dict if str(k) == CONF_SELECTED_MONITORS)
+            assert sel_key.default() == ["http_1"]
+
+            result = await hass.config_entries.options.async_configure(
+                result["flow_id"],
+                {
+                    CONF_SCAN_INTERVAL: CREDENTIALS["scan_interval"],
+                    CONF_STATS_PERIOD: CREDENTIALS["stats_period"],
+                    CONF_SELECTED_MONITORS: sel_key.default(),
+                },
+            )
+
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert entry.options[CONF_SELECTED_MONITORS] == ["http_1"]
+
     async def test_options_flow_saves_to_entry_options(self, hass):
         entry = await self._setup_entry(hass)
 

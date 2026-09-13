@@ -80,7 +80,13 @@ def _build_monitors_schema(
         for m in monitors
     ]
     all_keys = [opt["value"] for opt in options]
-    default_selected = current_selected if current_selected is not None else all_keys
+    # Drop monitors that were deleted in Kuvasz since the selection was saved,
+    # otherwise the selector rejects its own default value.
+    default_selected = (
+        [key for key in current_selected if key in all_keys]
+        if current_selected is not None
+        else all_keys
+    )
 
     fields: dict[vol.Marker, Any] = {}
     if include_settings:
