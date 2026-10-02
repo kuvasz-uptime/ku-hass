@@ -255,8 +255,16 @@ class TestTimestampSensors:
         heartbeat = next(e for e in entities if "last_heartbeat" in e.unique_id)
         assert heartbeat.native_value == datetime.fromisoformat("2024-01-01T01:00:00Z")
 
-    async def test_malformed_timestamp_reads_as_none(self, hass):
-        monitor = {**PUSH_MONITOR_UP, "lastHeartbeat": "not-a-timestamp"}
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "not-a-timestamp",
+            # No offset: the zone is unknown, and HA rejects naive timestamps.
+            "2024-01-01T01:00:00",
+        ],
+    )
+    async def test_malformed_timestamp_reads_as_none(self, hass, raw):
+        monitor = {**PUSH_MONITOR_UP, "lastHeartbeat": raw}
         coordinator = _make_coordinator(hass, [monitor])
         entities = await _setup_integration(hass, coordinator)
 

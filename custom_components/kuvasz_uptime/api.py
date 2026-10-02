@@ -61,6 +61,10 @@ class KuvaszClient:
         except TimeoutError as err:
             msg = "Request timed out"
             raise KuvaszApiError(msg) from err
+        except ValueError as err:
+            # A JSON content type with a body that isn't JSON (e.g. a proxy's page).
+            msg = f"Invalid JSON response for {path}"
+            raise KuvaszApiError(msg) from err
 
     async def _patch(self, path: str, data: dict[str, Any]) -> None:
         url = f"{self._base_url}{path}"

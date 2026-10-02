@@ -11,7 +11,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.selector import TextSelectorType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.kuvasz_uptime.api import KuvaszApiError
+from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszAuthError
 from custom_components.kuvasz_uptime.const import (
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_MONITORS,
@@ -495,6 +495,25 @@ class TestOptionsFlow:
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "cannot_connect"
+
+    @pytest.mark.parametrize(
+        ("error", "reason"),
+        [
+            (KuvaszAuthError("Invalid API key"), "invalid_auth"),
+            (RuntimeError("boom"), "unknown"),
+        ],
+    )
+    async def test_options_flow_aborts_with_specific_reason(self, hass, error, reason):
+        entry = await self._setup_entry(hass)
+
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
+            MockClient.return_value.get_settings = AsyncMock(side_effect=error)
+            result = await hass.config_entries.options.async_init(entry.entry_id)
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == reason
 
     async def test_options_flow_shows_all_current_monitors_as_options(self, hass):
         entry = await self._setup_entry(hass)

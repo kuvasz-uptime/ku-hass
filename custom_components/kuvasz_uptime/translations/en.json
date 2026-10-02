@@ -86,7 +86,9 @@
       }
     },
     "abort": {
-      "cannot_connect": "Failed to connect to the given instance. Check that it is reachable and try again."
+      "cannot_connect": "Failed to connect to the given instance. Check that it is reachable and try again.",
+      "invalid_auth": "The API key was rejected by your Kuvasz instance. Update it via Reconfigure, then try again.",
+      "unknown": "Unexpected error while connecting to your Kuvasz instance. Check the logs for details."
     }
   },
   "entity": {

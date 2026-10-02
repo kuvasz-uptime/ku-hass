@@ -377,15 +377,14 @@ class KuvaszOptionsFlowHandler(OptionsFlowWithReload):
             )
 
         entry = self.config_entry
-        try:
-            monitors = await _async_fetch_monitors(
-                self.hass,
-                entry.data[CONF_HOST],
-                entry.data.get(CONF_API_KEY) or None,
-                verify_ssl=entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
-            )
-        except KuvaszApiError:
-            return self.async_abort(reason="cannot_connect")
+        errors, monitors = await _async_validate_connection(
+            self.hass,
+            entry.data[CONF_HOST],
+            entry.data.get(CONF_API_KEY) or None,
+            verify_ssl=entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
+        )
+        if errors:
+            return self.async_abort(reason=errors["base"])
 
         def _current(key: str, default: Any = None) -> Any:
             return entry.options.get(key, entry.data.get(key, default))

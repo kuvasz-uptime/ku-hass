@@ -65,9 +65,16 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "uptime_status"
-    # These move on every check; recording them would write a state row per poll.
+    # These move on every check (Kuvasz bumps a push monitor's updated_at with
+    # every heartbeat). Leaving them out of the recorder keeps it from storing a
+    # new attributes row each time; the state row is still written.
     _unrecorded_attributes = frozenset(
-        {"last_uptime_check", "next_uptime_check", "next_expected_heartbeat"}
+        {
+            "last_uptime_check",
+            "next_uptime_check",
+            "next_expected_heartbeat",
+            "updated_at",
+        }
     )
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
@@ -213,7 +220,8 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "ssl_status"
-    # These move on every check; recording them would write a state row per poll.
+    # These move on every check. Leaving them out of the recorder keeps it from
+    # storing a new attributes row each time; the state row is still written.
     _unrecorded_attributes = frozenset({"last_ssl_check", "next_ssl_check"})
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:

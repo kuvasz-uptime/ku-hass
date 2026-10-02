@@ -75,11 +75,17 @@ def _stat(group: str, field: str) -> Callable[[_Monitor, _Stats], StateType]:
 
 
 def _timestamp(field: str) -> Callable[[_Monitor, _Stats], datetime | None]:
-    """Parse a datetime field of the monitor; malformed values read as None."""
+    """
+    Parse a datetime field of the monitor; malformed values read as None.
+
+    Kuvasz always sends an offset. A value without one is treated as malformed:
+    its zone can't be known, and HA rejects naive timestamps outright.
+    """
 
     def _parse(monitor: _Monitor, _: _Stats) -> datetime | None:
         raw = monitor.get(field)
-        return dt_util.parse_datetime(raw) if raw else None
+        parsed = dt_util.parse_datetime(raw) if raw else None
+        return parsed if parsed is not None and parsed.tzinfo is not None else None
 
     return _parse
 

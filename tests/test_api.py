@@ -79,6 +79,15 @@ class TestGetSettings:
         with pytest.raises(KuvaszApiError):
             await client.get_settings()
 
+    async def test_raises_api_error_on_invalid_json(self, client, mock_api):
+        mock_api.get(
+            f"{BASE_URL}/api/v2/settings",
+            text="{not json",
+            headers={"Content-Type": "application/json"},
+        )
+        with pytest.raises(KuvaszApiError, match="Invalid JSON"):
+            await client.get_settings()
+
     async def test_raises_api_error_on_timeout(self, client, mock_api):
         mock_api.get(f"{BASE_URL}/api/v2/settings", exc=TimeoutError())
         with pytest.raises(KuvaszApiError, match="timed out"):
