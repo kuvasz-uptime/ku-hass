@@ -1,6 +1,7 @@
 """Tests for the Kuvasz API client."""
 
 import asyncio
+from unittest.mock import patch
 
 import aiohttp
 import pytest
@@ -77,6 +78,21 @@ class TestGetSettings:
         mock_api.get(f"{BASE_URL}/api/v2/settings", status=500)
         with pytest.raises(KuvaszApiError):
             await client.get_settings()
+
+    async def test_raises_api_error_on_timeout(self, client, mock_api):
+        mock_api.get(f"{BASE_URL}/api/v2/settings", exc=TimeoutError())
+        with pytest.raises(KuvaszApiError, match="timed out"):
+            await client.get_settings()
+
+    async def test_requests_use_bounded_timeout(self, mock_api):
+        mock_api.get(f"{BASE_URL}/api/v2/settings", json=SETTINGS_RESPONSE)
+        session = mock_api.create_session(asyncio.get_running_loop())
+        try:
+            with patch.object(session, "get", wraps=session.get) as spy:
+                await KuvaszClient(host=BASE_URL, session=session).get_settings()
+        finally:
+            await session.close()
+        assert spy.call_args.kwargs["timeout"].total == 10
 
     async def test_raises_api_error_on_connection_failure(self, client, mock_api):
         mock_api.get(
@@ -189,6 +205,14 @@ class TestGetMonitors:
                 "docker-monitors",
             )
         )
+
+    async def test_get_all_monitors_keeps_auth_errors_distinct(self, client, mock_api):
+        """Auth failures must stay recognizable so they can trigger reauth."""
+        mock_api.get(f"{BASE_URL}/api/v2/http-monitors", status=401)
+        mock_api.get(f"{BASE_URL}/api/v2/push-monitors", json=[])
+        legacy = tuple(m for m in MONITOR_TYPES if not m.optional)
+        with pytest.raises(KuvaszAuthError):
+            await client.get_all_monitors(legacy)
 
     async def test_get_all_monitors_empty_types(self, client, mock_api):
         assert await client.get_all_monitors(()) == []

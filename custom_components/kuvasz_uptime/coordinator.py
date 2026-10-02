@@ -7,9 +7,10 @@ import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import KuvaszApiError, KuvaszClient
+from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
 from .const import DEFAULT_STATS_PERIOD, DOMAIN
 from .monitor_types import (
     MONITOR_TYPES_BY_KEY,
@@ -95,6 +96,9 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                     if f"{m['_type']}_{m['id']}" in self._selected_monitors
                 ]
             stats = await self._fetch_stats(monitors)
+        except KuvaszAuthError as err:
+            msg = "The API key was rejected by your Kuvasz instance"
+            raise ConfigEntryAuthFailed(msg) from err
         except KuvaszApiError as err:
             msg = f"Error during communication with your Kuvasz instance: {err}"
             raise UpdateFailed(msg) from err

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant.config_entries import (
@@ -39,6 +39,11 @@ from .const import (
 )
 from .monitor_types import supported_monitor_types
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from homeassistant.core import HomeAssistant
+
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_SCHEMA = vol.Schema(
@@ -58,6 +63,45 @@ STEP_USER_SCHEMA = vol.Schema(
         ),
     }
 )
+
+STEP_REAUTH_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
+
+STEP_RECONFIGURE_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Optional(CONF_API_KEY): str,
+        vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
+    }
+)
+
+
+async def _async_fetch_monitors(
+    hass: HomeAssistant, host: str, api_key: str | None, *, verify_ssl: bool
+) -> list[dict[str, Any]]:
+    """Connect to a Kuvasz instance and return every monitor it supports."""
+    session = async_get_clientsession(hass, verify_ssl=verify_ssl)
+    client = KuvaszClient(host=host, api_key=api_key, session=session)
+    settings = await client.get_settings()
+    return await client.get_all_monitors(supported_monitor_types(settings))
+
+
+async def _async_validate_connection(
+    hass: HomeAssistant, host: str, api_key: str | None, *, verify_ssl: bool
+) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    """Return form errors (empty on success) and the monitors that were fetched."""
+    try:
+        monitors = await _async_fetch_monitors(
+            hass, host, api_key, verify_ssl=verify_ssl
+        )
+    except KuvaszAuthError:
+        return {"base": "invalid_auth"}, []
+    except KuvaszApiError:
+        _LOGGER.exception("Failed to connect to Kuvasz instance at %s", host)
+        return {"base": "cannot_connect"}, []
+    except Exception:
+        _LOGGER.exception("Unexpected error while connecting to Kuvasz Uptime")
+        return {"base": "unknown"}, []
+    return {}, monitors
 
 
 def _monitor_key(monitor: dict[str, Any]) -> str:
@@ -155,25 +199,10 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(host)
                 self._abort_if_unique_id_configured()
 
-                session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
-                client = KuvaszClient(host=host, api_key=api_key, session=session)
-
-                try:
-                    settings = await client.get_settings()
-                    self._monitors = await client.get_all_monitors(
-                        supported_monitor_types(settings)
-                    )
-                except KuvaszAuthError:
-                    errors["base"] = "invalid_auth"
-                except KuvaszApiError:
-                    _LOGGER.exception(
-                        "Failed to connect to Kuvasz instance at %s", host
-                    )
-                    errors["base"] = "cannot_connect"
-                except Exception:
-                    _LOGGER.exception("Unexpected error during Kuvasz Uptime setup")
-                    errors["base"] = "unknown"
-                else:
+                errors, self._monitors = await _async_validate_connection(
+                    self.hass, host, api_key, verify_ssl=verify_ssl
+                )
+                if not errors:
                     self._name = name
                     self._host = host
                     self._api_key = api_key
@@ -217,6 +246,79 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         )
 
+    async def async_step_reauth(
+        self, _entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Start reauthentication after the API key was rejected."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for a new API key and verify it against the instance."""
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            api_key = user_input[CONF_API_KEY]
+            errors, _ = await _async_validate_connection(
+                self.hass,
+                entry.data[CONF_HOST],
+                api_key,
+                verify_ssl=entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
+            )
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_API_KEY: api_key}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=STEP_REAUTH_SCHEMA,
+            errors=errors,
+            description_placeholders={"name": entry.title},
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the connection details of an existing entry."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            host = user_input[CONF_HOST].rstrip("/")
+            api_key = user_input.get(CONF_API_KEY) or None
+            verify_ssl = user_input[CONF_VERIFY_SSL]
+
+            if host != entry.data[CONF_HOST]:
+                await self.async_set_unique_id(host)
+                self._abort_if_unique_id_configured()
+
+            errors, _ = await _async_validate_connection(
+                self.hass, host, api_key, verify_ssl=verify_ssl
+            )
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    unique_id=host,
+                    data_updates={
+                        CONF_HOST: host,
+                        CONF_API_KEY: api_key,
+                        CONF_VERIFY_SSL: verify_ssl,
+                    },
+                )
+
+        suggested = user_input if user_input is not None else entry.data
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_RECONFIGURE_SCHEMA,
+                {k: v for k, v in suggested.items() if v is not None},
+            ),
+            errors=errors,
+        )
+
 
 class KuvaszOptionsFlowHandler(OptionsFlow):
     """Options flow for updating scan interval and monitor selection."""
@@ -235,16 +337,13 @@ class KuvaszOptionsFlowHandler(OptionsFlow):
             )
 
         entry = self.config_entry
-        verify_ssl = entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
-        session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
-        client = KuvaszClient(
-            host=entry.data[CONF_HOST],
-            api_key=entry.data.get(CONF_API_KEY) or None,
-            session=session,
-        )
         try:
-            settings = await client.get_settings()
-            monitors = await client.get_all_monitors(supported_monitor_types(settings))
+            monitors = await _async_fetch_monitors(
+                self.hass,
+                entry.data[CONF_HOST],
+                entry.data.get(CONF_API_KEY) or None,
+                verify_ssl=entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
+            )
         except KuvaszApiError:
             return self.async_abort(reason="cannot_connect")
 

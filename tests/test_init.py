@@ -8,7 +8,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.kuvasz_uptime.__init__ import _remove_stale_devices
-from custom_components.kuvasz_uptime.api import KuvaszApiError
+from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszAuthError
 from custom_components.kuvasz_uptime.const import DOMAIN
 from tests.conftest import (
     HTTP_MONITOR_UP,
@@ -186,3 +186,21 @@ class TestSetupResilience:
         assert entry.state is ConfigEntryState.LOADED
         dev_reg = dr.async_get(hass)
         assert dev_reg.async_get(tcp_dev.id) is not None
+
+
+class TestReauthTrigger:
+    async def test_rejected_api_key_starts_reauth_flow(self, hass):
+        entry = _make_entry(hass)
+
+        with patch("custom_components.kuvasz_uptime.KuvaszClient") as MockClient:
+            instance = MockClient.return_value
+            instance.get_settings = AsyncMock(side_effect=KuvaszAuthError("bad key"))
+
+            await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+        assert entry.state is ConfigEntryState.SETUP_ERROR
+        flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        assert len(flows) == 1
+        assert flows[0]["context"]["source"] == "reauth"
+        assert flows[0]["context"]["entry_id"] == entry.entry_id

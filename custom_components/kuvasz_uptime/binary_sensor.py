@@ -65,6 +65,10 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "uptime_status"
+    # These move on every check; recording them would write a state row per poll.
+    _unrecorded_attributes = frozenset(
+        {"last_uptime_check", "next_uptime_check", "next_expected_heartbeat"}
+    )
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the uptime binary sensor."""
@@ -206,6 +210,8 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "ssl_status"
+    # These move on every check; recording them would write a state row per poll.
+    _unrecorded_attributes = frozenset({"last_ssl_check", "next_ssl_check"})
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the SSL binary sensor."""

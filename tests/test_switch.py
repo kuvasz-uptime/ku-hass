@@ -2,7 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from custom_components.kuvasz_uptime.api import KuvaszClient
+import pytest
+from homeassistant.exceptions import HomeAssistantError
+
+from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
 from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
@@ -311,3 +314,30 @@ class TestDockerSwitch:
         assert (
             entities[0].unique_id == "kuvasz_uptime_test_entry_docker_60_enabled_switch"
         )
+
+
+class TestEnabledSwitchErrors:
+    @pytest.mark.parametrize(
+        ("action", "translation_key"),
+        [("async_turn_on", "enable_failed"), ("async_turn_off", "disable_failed")],
+    )
+    async def test_api_error_raises_home_assistant_error(
+        self, hass, action, translation_key
+    ):
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
+        coordinator.client.patch_monitor = AsyncMock(
+            side_effect=KuvaszApiError("API error 500")
+        )
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        with pytest.raises(HomeAssistantError) as exc_info:
+            await getattr(entities[0], action)()
+
+        assert exc_info.value.translation_domain == DOMAIN
+        assert exc_info.value.translation_key == translation_key
+        assert exc_info.value.translation_placeholders == {
+            "monitor": "My Website",
+            "error": "API error 500",
+        }
+        coordinator.async_request_refresh.assert_not_awaited()

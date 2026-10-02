@@ -18,6 +18,22 @@
           "selected_monitors": "Monitors to track"
         },
         "description": "Choose which monitors should be exposed as devices. All monitors are selected by default."
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Kuvasz Uptime",
+        "description": "The API key for {name} was rejected. Enter a valid API key to reconnect.",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure your Kuvasz Uptime instance",
+        "description": "Update the connection details. Leave the API key empty if your instance does not require one.",
+        "data": {
+          "host": "Host URL (e.g. http://192.168.1.10:8080)",
+          "api_key": "API Key",
+          "verify_ssl": "Verify SSL certificate"
+        }
       }
     },
     "error": {
@@ -27,7 +43,9 @@
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This instance is already configured."
+      "already_configured": "This instance is already configured.",
+      "reauth_successful": "Reauthentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful."
     }
   },
   "options": {
@@ -90,6 +108,14 @@
       "kuvasz_update": {
         "name": "Kuvasz Update"
       }
+    }
+  },
+  "exceptions": {
+    "enable_failed": {
+      "message": "Failed to enable monitor {monitor}: {error}"
+    },
+    "disable_failed": {
+      "message": "Failed to disable monitor {monitor}: {error}"
     }
   }
 }

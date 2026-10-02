@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _HTTP_UNAUTHORIZED = 401
 _HTTP_CLIENT_ERROR = 400
+_REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 class KuvaszApiError(Exception):
@@ -45,7 +46,7 @@ class KuvaszClient:
         url = f"{self._base_url}{path}"
         try:
             async with self._session.get(
-                url, headers=self._headers, params=params
+                url, headers=self._headers, params=params, timeout=_REQUEST_TIMEOUT
             ) as resp:
                 if resp.status == _HTTP_UNAUTHORIZED:
                     msg = "Invalid API key"
@@ -65,7 +66,7 @@ class KuvaszClient:
         url = f"{self._base_url}{path}"
         try:
             async with self._session.patch(
-                url, headers=self._headers, json=data
+                url, headers=self._headers, json=data, timeout=_REQUEST_TIMEOUT
             ) as resp:
                 if resp.status == _HTTP_UNAUTHORIZED:
                     msg = "Invalid API key"
@@ -117,6 +118,8 @@ class KuvaszClient:
 
         monitors: list[dict[str, Any]] = []
         for monitor_type, result in zip(monitor_types, results, strict=True):
+            if isinstance(result, KuvaszAuthError):
+                raise result
             if isinstance(result, BaseException):
                 msg = f"Failed to fetch {monitor_type.key} monitors: {result}"
                 raise KuvaszApiError(msg) from result

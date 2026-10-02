@@ -48,6 +48,11 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         return {}
 
     @property
+    def available(self) -> bool:
+        """Return False once the monitor is no longer reported by the instance."""
+        return super().available and bool(self._monitor_data)
+
+    @property
     def _monitor_stats(self) -> dict[str, Any]:
         return self.coordinator.data.monitor_stats(self._monitor_type, self._monitor_id)
 

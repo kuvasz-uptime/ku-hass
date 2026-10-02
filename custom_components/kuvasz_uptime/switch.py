@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.exceptions import HomeAssistantError
 
+from .api import KuvaszApiError
 from .const import DOMAIN
 from .entity import KuvaszMonitorEntity
 from .monitor_types import MONITOR_TYPES_BY_KEY
@@ -60,9 +62,19 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
         await self._set_enabled(enabled=False)
 
     async def _set_enabled(self, *, enabled: bool) -> None:
-        await self.coordinator.client.patch_monitor(
-            MONITOR_TYPES_BY_KEY[self._monitor_type],
-            self._monitor_id,
-            {"enabled": enabled},
-        )
+        try:
+            await self.coordinator.client.patch_monitor(
+                MONITOR_TYPES_BY_KEY[self._monitor_type],
+                self._monitor_id,
+                {"enabled": enabled},
+            )
+        except KuvaszApiError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="enable_failed" if enabled else "disable_failed",
+                translation_placeholders={
+                    "monitor": self._monitor_name,
+                    "error": str(err),
+                },
+            ) from err
         await self.coordinator.async_request_refresh()

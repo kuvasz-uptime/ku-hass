@@ -87,11 +87,13 @@ The instance name must be unique across all configured Kuvasz entries. It is use
 
 You can change options later via the **Configure** button on the integration card:
 
-- **Polling interval** - how often to refresh monitor state (default: 30 s, min: 10 s, max: 300 s)
+- **Polling interval** - how often to refresh monitor state (default: 30 s, min: 10 s, max: 3600 s)
 - **Stats period** - the time window used for uptime percentage and response time stats (default: 24 h)
 - **Monitor selection** - add or remove monitors without re-adding the integration
 
 Monitors that are deselected are removed from the HA device registry (including all their entities).
+
+To change the instance URL, API key or SSL verification, choose **Reconfigure** from the integration entry's menu. If your API key is rotated or revoked, Home Assistant prompts you to re-authenticate with the new key under **Settings → Devices & Services**.
 
 ## Contributing
 
