@@ -46,7 +46,7 @@ from .const import (
 )
 from .coordinator import entry_value
 from .entity import monitor_device_identifier, server_device_identifier
-from .monitor_types import supported_monitor_types
+from .monitor_types import monitor_key, supported_monitor_types
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -116,10 +116,6 @@ async def _async_validate_connection(
     return {}, monitors
 
 
-def _monitor_key(monitor: dict[str, Any]) -> str:
-    return f"{monitor['_type']}_{monitor['id']}"
-
-
 def _is_same_monitor(old: Mapping[str, Any], new: Mapping[str, Any]) -> bool:
     """Compare creation times when both sides know them, else names."""
     # Kuvasz renders timestamps in the server's timezone, so compare instants.
@@ -181,7 +177,7 @@ def _build_monitors_schema(
 ) -> vol.Schema:
     options: list[SelectOptionDict] = [
         {
-            "value": _monitor_key(m),
+            "value": monitor_key(m["_type"], m["id"]),
             "label": f"{m['name']} ({m['_type'].upper()})",
         }
         for m in monitors

@@ -11,7 +11,7 @@ from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import KuvaszCoordinator
-from .monitor_types import MONITOR_TYPES_BY_KEY
+from .monitor_types import MONITOR_TYPES_BY_KEY, monitor_key
 
 MANUFACTURER = "Kuvasz Uptime"
 
@@ -25,7 +25,7 @@ def monitor_device_identifier(
     entry_id: str, monitor_type: str, monitor_id: int
 ) -> tuple[str, str]:
     """Return the device identifier of a monitor device."""
-    return (DOMAIN, f"{entry_id}_{monitor_type}_{monitor_id}")
+    return (DOMAIN, f"{entry_id}_{monitor_key(monitor_type, monitor_id)}")
 
 
 def server_device_info(coordinator: KuvaszCoordinator) -> DeviceInfo:
