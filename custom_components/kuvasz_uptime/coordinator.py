@@ -94,6 +94,9 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             set(selected_monitors) if selected_monitors is not None else None
         )
         self._stats_period = stats_period
+        # Registry id of the server device, set during setup before the platforms
+        # load; monitor devices link to it.
+        self.server_device_id: str | None = None
 
     @override
     async def _async_update_data(self) -> KuvaszCoordinatorData:

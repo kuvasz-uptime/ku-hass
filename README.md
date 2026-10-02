@@ -55,7 +55,7 @@ Every integration entry also has a **Kuvasz Server** device, which shows the ins
 
 ## Requirements
 
-- Home Assistant 2026.3 or newer
+- Home Assistant 2026.8 or newer
 - Kuvasz Uptime 3.2.0 or newer
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (self-hosted)
 - Your [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) for your Kuvasz instance

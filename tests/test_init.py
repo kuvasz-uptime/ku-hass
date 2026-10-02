@@ -210,8 +210,8 @@ class TestReauthTrigger:
 
 
 def _server_device(hass, entry):
-    return dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, f"{entry.entry_id}_server")}
+    return dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, f"{entry.entry_id}_server"), entry.entry_id
     )
 
 

@@ -62,13 +62,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bo
 
     _remove_stale_devices(hass, entry, coordinator.data.monitors)
 
-    # Monitor devices point at the server device via via_device, so it has to
+    # Monitor devices point at the server device via via_device_id, so it has to
     # exist before the platforms add their entities.
     @callback
     def _async_update_server_device() -> None:
-        dr.async_get(hass).async_get_or_create(
+        device = dr.async_get(hass).async_get_or_create(
             config_entry_id=entry.entry_id, **server_device_info(coordinator)
         )
+        coordinator.server_device_id = device.id
 
     _async_update_server_device()
     entry.async_on_unload(coordinator.async_add_listener(_async_update_server_device))

@@ -87,12 +87,14 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         spec = MONITOR_TYPES_BY_KEY.get(self._monitor_type)
         type_label = spec.device_label if spec else self._monitor_type.upper()
         monitor_ident = f"{self._instance_key}_{self._monitor_type}_{self._monitor_id}"
-        return DeviceInfo(
+        info = DeviceInfo(
             identifiers={(DOMAIN, monitor_ident)},
             name=self._monitor_name,
             manufacturer=MANUFACTURER,
             model=f"{type_label} Monitor",
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=self.coordinator.config_entry.data[CONF_HOST],
-            via_device=server_device_identifier(self._instance_key),
         )
+        if self.coordinator.server_device_id is not None:
+            info["via_device_id"] = self.coordinator.server_device_id
+        return info

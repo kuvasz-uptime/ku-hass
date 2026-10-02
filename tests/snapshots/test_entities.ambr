@@ -39,7 +39,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_dns_my_domain_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Domain Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Domain Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_dns_my_domain_enabled',
@@ -90,7 +90,7 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'drift_detection_enabled': True,
       'drift_record_types': list([
         'NS',
@@ -98,7 +98,7 @@
       ]),
       'expected_response_code': 'NOERROR',
       'failure_count_threshold': 1,
-      'friendly_name': 'My Domain Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Domain Uptime Status',
       'host': 'example.com',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'latency_threshold_ms': 1000,
@@ -165,7 +165,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_docker_my_container_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Container Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_docker_my_container_enabled',
@@ -217,10 +217,10 @@
     'attributes': ReadOnlyDict({
       'container': 'postgres',
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'docker_host': 'local',
       'failure_count_threshold': 1,
-      'friendly_name': 'My Container Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Uptime Status',
       'image': 'postgres:17',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'metrics_history_enabled': True,
@@ -279,7 +279,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_http_down_service_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'Down Service Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_http_down_service_enabled',
@@ -329,8 +329,8 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_http_down_service_ssl_status-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'safety',
-      'friendly_name': 'Down Service SSL Status',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'safety',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service SSL Status',
       'last_ssl_check': '2024-01-01T01:00:00Z',
       'next_ssl_check': '2024-01-01T01:01:00Z',
       'ssl_error': 'SSL Handshake failed: PKIX path validation failed',
@@ -388,7 +388,7 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'expected_keyword': None,
       'expected_keyword_case_sensitive': False,
       'expected_keyword_negated': False,
@@ -398,7 +398,7 @@
       'failure_count_threshold': 1,
       'follow_redirects': True,
       'force_no_cache': False,
-      'friendly_name': 'Down Service Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service Uptime Status',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'latency_history_enabled': True,
       'next_uptime_check': '2024-01-01T01:01:00Z',
@@ -458,7 +458,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_http_my_website_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Website Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_http_my_website_enabled',
@@ -508,8 +508,8 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_http_my_website_ssl_status-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'safety',
-      'friendly_name': 'My Website SSL Status',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'safety',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website SSL Status',
       'last_ssl_check': '2024-01-01T01:00:00Z',
       'next_ssl_check': '2024-01-01T01:01:00Z',
       'ssl_error': None,
@@ -567,7 +567,7 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'expected_keyword': None,
       'expected_keyword_case_sensitive': False,
       'expected_keyword_negated': False,
@@ -577,7 +577,7 @@
       'failure_count_threshold': 1,
       'follow_redirects': True,
       'force_no_cache': False,
-      'friendly_name': 'My Website Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website Uptime Status',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'latency_history_enabled': True,
       'next_uptime_check': '2024-01-01T01:01:00Z',
@@ -637,7 +637,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_icmp_my_server_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Server Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_icmp_my_server_enabled',
@@ -688,9 +688,9 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'failure_count_threshold': 1,
-      'friendly_name': 'My Server Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Uptime Status',
       'host': '192.168.1.1',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'metrics_history_enabled': True,
@@ -751,7 +751,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_push_my_cron_job_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Cron Job Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Cron Job Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_push_my_cron_job_enabled',
@@ -802,9 +802,9 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'failure_count_threshold': 1,
-      'friendly_name': 'My Cron Job Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Cron Job Uptime Status',
       'grace_period': 60,
       'heartbeat_interval': 300,
       'last_uptime_check': '2024-01-01T01:00:00Z',
@@ -861,7 +861,7 @@
 # name: test_entities[binary_sensor][binary_sensor.kuvasz_tcp_my_database_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Database Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Database Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'binary_sensor.kuvasz_tcp_my_database_enabled',
@@ -912,9 +912,9 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'created_at': '2024-01-01T00:00:00Z',
-      'device_class': 'connectivity',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'connectivity',
       'failure_count_threshold': 1,
-      'friendly_name': 'My Database Uptime Status',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Database Uptime Status',
       'host': '192.168.1.2',
       'last_uptime_check': '2024-01-01T01:00:00Z',
       'latency_threshold_ms': 1000,
@@ -942,7 +942,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -980,10 +980,10 @@
 # name: test_entities[sensor][sensor.kuvasz_dns_my_domain_average_latency_in_ms-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'duration',
-      'friendly_name': 'My Domain Average Latency',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfTime.MILLISECONDS: 'ms'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'duration',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Domain Average Latency',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.MILLISECONDS: 'ms'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_dns_my_domain_average_latency_in_ms',
@@ -1000,7 +1000,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1038,9 +1038,9 @@
 # name: test_entities[sensor][sensor.kuvasz_dns_my_domain_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Domain Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Domain Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_dns_my_domain_uptime_ratio',
@@ -1057,7 +1057,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1095,9 +1095,9 @@
 # name: test_entities[sensor][sensor.kuvasz_docker_my_container_average_cpu_usage-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Container Average CPU Usage',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Average CPU Usage',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_docker_my_container_average_cpu_usage',
@@ -1114,7 +1114,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1155,10 +1155,10 @@
 # name: test_entities[sensor][sensor.kuvasz_docker_my_container_average_memory_usage-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'data_size',
-      'friendly_name': 'My Container Average Memory Usage',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfInformation.MEBIBYTES: 'MiB'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'data_size',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Average Memory Usage',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfInformation.MEBIBYTES: 'MiB'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_docker_my_container_average_memory_usage',
@@ -1175,7 +1175,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1213,9 +1213,9 @@
 # name: test_entities[sensor][sensor.kuvasz_docker_my_container_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Container Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_docker_my_container_uptime_ratio',
@@ -1232,7 +1232,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1270,10 +1270,10 @@
 # name: test_entities[sensor][sensor.kuvasz_http_down_service_average_latency_in_ms-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'duration',
-      'friendly_name': 'Down Service Average Latency',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfTime.MILLISECONDS: 'ms'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'duration',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service Average Latency',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.MILLISECONDS: 'ms'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_down_service_average_latency_in_ms',
@@ -1323,8 +1323,8 @@
 # name: test_entities[sensor][sensor.kuvasz_http_down_service_ssl_valid_until-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'timestamp',
-      'friendly_name': 'Down Service SSL Valid Until',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service SSL Valid Until',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_down_service_ssl_valid_until',
@@ -1341,7 +1341,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1379,9 +1379,9 @@
 # name: test_entities[sensor][sensor.kuvasz_http_down_service_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'Down Service Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_down_service_uptime_ratio',
@@ -1398,7 +1398,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1436,10 +1436,10 @@
 # name: test_entities[sensor][sensor.kuvasz_http_my_website_average_latency_in_ms-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'duration',
-      'friendly_name': 'My Website Average Latency',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfTime.MILLISECONDS: 'ms'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'duration',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website Average Latency',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.MILLISECONDS: 'ms'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_my_website_average_latency_in_ms',
@@ -1489,8 +1489,8 @@
 # name: test_entities[sensor][sensor.kuvasz_http_my_website_ssl_valid_until-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'timestamp',
-      'friendly_name': 'My Website SSL Valid Until',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website SSL Valid Until',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_my_website_ssl_valid_until',
@@ -1507,7 +1507,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1545,9 +1545,9 @@
 # name: test_entities[sensor][sensor.kuvasz_http_my_website_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Website Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_http_my_website_uptime_ratio',
@@ -1564,7 +1564,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1602,10 +1602,10 @@
 # name: test_entities[sensor][sensor.kuvasz_icmp_my_server_average_latency_in_ms-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'duration',
-      'friendly_name': 'My Server Average Latency',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfTime.MILLISECONDS: 'ms'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'duration',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Average Latency',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.MILLISECONDS: 'ms'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_icmp_my_server_average_latency_in_ms',
@@ -1622,7 +1622,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1660,9 +1660,9 @@
 # name: test_entities[sensor][sensor.kuvasz_icmp_my_server_average_packet_loss-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Server Average Packet Loss',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Average Packet Loss',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_icmp_my_server_average_packet_loss',
@@ -1679,7 +1679,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1717,9 +1717,9 @@
 # name: test_entities[sensor][sensor.kuvasz_icmp_my_server_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Server Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_icmp_my_server_uptime_ratio',
@@ -1769,8 +1769,8 @@
 # name: test_entities[sensor][sensor.kuvasz_push_my_cron_job_last_heartbeat-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'timestamp',
-      'friendly_name': 'My Cron Job Last Heartbeat',
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Cron Job Last Heartbeat',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_push_my_cron_job_last_heartbeat',
@@ -1787,7 +1787,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1825,9 +1825,9 @@
 # name: test_entities[sensor][sensor.kuvasz_push_my_cron_job_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Cron Job Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Cron Job Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_push_my_cron_job_uptime_ratio',
@@ -1844,7 +1844,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1882,10 +1882,10 @@
 # name: test_entities[sensor][sensor.kuvasz_tcp_my_database_average_latency_in_ms-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'device_class': 'duration',
-      'friendly_name': 'My Database Average Latency',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': <UnitOfTime.MILLISECONDS: 'ms'>,
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'duration',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Database Average Latency',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.MILLISECONDS: 'ms'>,
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_tcp_my_database_average_latency_in_ms',
@@ -1902,7 +1902,7 @@
     ]),
     'area_id': None,
     'capabilities': dict({
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
     }),
     'config_entry_id': <ANY>,
     'config_subentry_id': <ANY>,
@@ -1940,9 +1940,9 @@
 # name: test_entities[sensor][sensor.kuvasz_tcp_my_database_uptime_ratio-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Database Uptime Ratio',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-      'unit_of_measurement': '%',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Database Uptime Ratio',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: '%',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.kuvasz_tcp_my_database_uptime_ratio',
@@ -1992,7 +1992,7 @@
 # name: test_entities[switch][switch.kuvasz_dns_my_domain_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Domain Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Domain Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_dns_my_domain_enabled',
@@ -2042,7 +2042,7 @@
 # name: test_entities[switch][switch.kuvasz_docker_my_container_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Container Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Container Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_docker_my_container_enabled',
@@ -2092,7 +2092,7 @@
 # name: test_entities[switch][switch.kuvasz_http_down_service_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'Down Service Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Down Service Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_http_down_service_enabled',
@@ -2142,7 +2142,7 @@
 # name: test_entities[switch][switch.kuvasz_http_my_website_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Website Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Website Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_http_my_website_enabled',
@@ -2192,7 +2192,7 @@
 # name: test_entities[switch][switch.kuvasz_icmp_my_server_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Server Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Server Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_icmp_my_server_enabled',
@@ -2242,7 +2242,7 @@
 # name: test_entities[switch][switch.kuvasz_push_my_cron_job_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Cron Job Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Cron Job Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_push_my_cron_job_enabled',
@@ -2292,7 +2292,7 @@
 # name: test_entities[switch][switch.kuvasz_tcp_my_database_enabled-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'friendly_name': 'My Database Enabled',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'My Database Enabled',
     }),
     'context': <ANY>,
     'entity_id': 'switch.kuvasz_tcp_my_database_enabled',
@@ -2342,19 +2342,19 @@
 # name: test_entities[update][update.kuvasz_server_kuvasz_update-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
-      'auto_update': False,
-      'display_precision': 0,
-      'entity_picture': '/api/brands/integration/kuvasz_uptime/icon.png',
-      'friendly_name': 'Kuvasz Server',
-      'in_progress': False,
-      'installed_version': '2.1.0',
-      'latest_version': '2.2.0',
-      'release_summary': None,
-      'release_url': 'https://github.com/kuvasz-uptime/kuvasz/releases/tag/v2.2.0',
-      'skipped_version': None,
-      'supported_features': <UpdateEntityFeature: 0>,
-      'title': None,
-      'update_percentage': None,
+      <UpdateEntityStateAttribute.AUTO_UPDATE: 'auto_update'>: False,
+      <UpdateEntityStateAttribute.DISPLAY_PRECISION: 'display_precision'>: 0,
+      <EntityStateAttribute.ENTITY_PICTURE: 'entity_picture'>: '/api/brands/integration/kuvasz_uptime/icon.png',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kuvasz Server',
+      <UpdateEntityStateAttribute.IN_PROGRESS: 'in_progress'>: False,
+      <UpdateEntityStateAttribute.INSTALLED_VERSION: 'installed_version'>: '2.1.0',
+      <UpdateEntityStateAttribute.LATEST_VERSION: 'latest_version'>: '2.2.0',
+      <UpdateEntityStateAttribute.RELEASE_SUMMARY: 'release_summary'>: None,
+      <UpdateEntityStateAttribute.RELEASE_URL: 'release_url'>: 'https://github.com/kuvasz-uptime/kuvasz/releases/tag/v2.2.0',
+      <UpdateEntityStateAttribute.SKIPPED_VERSION: 'skipped_version'>: None,
+      <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <UpdateEntityFeature: 0>,
+      <UpdateEntityStateAttribute.TITLE: 'title'>: None,
+      <UpdateEntityStateAttribute.UPDATE_PERCENTAGE: 'update_percentage'>: None,
     }),
     'context': <ANY>,
     'entity_id': 'update.kuvasz_server_kuvasz_update',

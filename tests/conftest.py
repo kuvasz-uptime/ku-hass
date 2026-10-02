@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
 
 from custom_components.kuvasz_uptime.const import DOMAIN
 
@@ -14,6 +15,17 @@ pytest_plugins = "pytest_homeassistant_custom_component"
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Allow HA to discover integrations under custom_components/."""
     return
+
+
+@pytest.fixture
+def snapshot(snapshot):
+    """
+    Use the HA snapshot extension.
+
+    The harness overrides syrupy's fixture to do this, but with syrupy 6 the
+    plugins register in the other order and syrupy's own fixture wins.
+    """
+    return snapshot.use_extension(HomeAssistantSnapshotExtension)
 
 
 # ---------------------------------------------------------------------------
