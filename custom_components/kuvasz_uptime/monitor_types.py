@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 from .const import (
     API_DNS_MONITORS,
+    API_DOCKER_MONITORS,
     API_HTTP_MONITORS,
     API_ICMP_MONITORS,
     API_PUSH_MONITORS,
     API_TCP_MONITORS,
     MONITOR_TYPE_DNS,
+    MONITOR_TYPE_DOCKER,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -67,6 +69,13 @@ MONITOR_TYPES: tuple[MonitorType, ...] = (
         api_path=API_DNS_MONITORS,
         device_label="DNS",
         read_only_setting="areDnsMonitorsReadOnly",
+        optional=True,
+    ),
+    MonitorType(
+        key=MONITOR_TYPE_DOCKER,
+        api_path=API_DOCKER_MONITORS,
+        device_label="Docker",
+        read_only_setting="areDockerMonitorsReadOnly",
         optional=True,
     ),
 )

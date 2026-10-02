@@ -11,11 +11,12 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfInformation, UnitOfTime
 
 from .const import (
     DOMAIN,
     MONITOR_TYPE_DNS,
+    MONITOR_TYPE_DOCKER,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -60,7 +61,7 @@ TIMESTAMP_SENSOR_DESCRIPTIONS: tuple[KuvaszTimestampSensorDescription, ...] = (
 
 
 # Monitor types that record latency, and the field gating their history.
-# Push monitors record no latency at all.
+# Push and Docker monitors record no latency at all.
 _LATENCY_HISTORY_FIELD: dict[str, str] = {
     MONITOR_TYPE_HTTP: "latencyHistoryEnabled",
     MONITOR_TYPE_ICMP: "metricsHistoryEnabled",
@@ -91,6 +92,9 @@ async def async_setup_entry(
             entities.append(KuvaszAvgResponseTimeSensor(coordinator, monitor))
         if monitor_type == MONITOR_TYPE_ICMP and monitor.get("metricsHistoryEnabled"):
             entities.append(KuvaszAvgPacketLossSensor(coordinator, monitor))
+        if monitor_type == MONITOR_TYPE_DOCKER and monitor.get("metricsHistoryEnabled"):
+            entities.append(KuvaszAvgCpuUsageSensor(coordinator, monitor))
+            entities.append(KuvaszAvgMemoryUsageSensor(coordinator, monitor))
         for desc in TIMESTAMP_SENSOR_DESCRIPTIONS:
             if monitor_type not in desc.applicable_types:
                 continue
@@ -169,6 +173,54 @@ class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
         if packet_loss_stats is None:
             return None
         return packet_loss_stats.get("averagePacketLossPercentage")
+
+
+class KuvaszAvgCpuUsageSensor(KuvaszMonitorEntity, SensorEntity):
+    """Sensor reporting average container CPU usage for Docker monitors."""
+
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "average_cpu_usage"
+
+    def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        """Initialize the average CPU usage sensor."""
+        super().__init__(coordinator, monitor)
+        self._attr_unique_id = self._build_unique_id("average_cpu_usage")
+        self.entity_id = self._build_entity_id("sensor", "average_cpu_usage")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return average CPU usage as a percentage."""
+        cpu_stats = self._monitor_stats.get("cpuStats")
+        if cpu_stats is None:
+            return None
+        return cpu_stats.get("averageCpuUsagePercentage")
+
+
+class KuvaszAvgMemoryUsageSensor(KuvaszMonitorEntity, SensorEntity):
+    """Sensor reporting average container memory usage for Docker monitors."""
+
+    _attr_native_unit_of_measurement = UnitOfInformation.BYTES
+    _attr_suggested_unit_of_measurement = UnitOfInformation.MEBIBYTES
+    _attr_device_class = SensorDeviceClass.DATA_SIZE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "average_memory_usage"
+
+    def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
+        """Initialize the average memory usage sensor."""
+        super().__init__(coordinator, monitor)
+        self._attr_unique_id = self._build_unique_id("average_memory_usage")
+        self.entity_id = self._build_entity_id("sensor", "average_memory_usage")
+
+    @property
+    def native_value(self) -> int | None:
+        """Return average memory usage in bytes."""
+        memory_stats = self._monitor_stats.get("memoryStats")
+        if memory_stats is None:
+            return None
+        return memory_stats.get("averageMemoryUsageBytes")
 
 
 class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):

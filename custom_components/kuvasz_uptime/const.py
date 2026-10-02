@@ -30,12 +30,14 @@ API_PUSH_MONITORS = f"{API_BASE}/push-monitors"
 API_ICMP_MONITORS = f"{API_BASE}/icmp-monitors"
 API_TCP_MONITORS = f"{API_BASE}/tcp-monitors"
 API_DNS_MONITORS = f"{API_BASE}/dns-monitors"
+API_DOCKER_MONITORS = f"{API_BASE}/docker-monitors"
 
 MONITOR_TYPE_HTTP = "http"
 MONITOR_TYPE_PUSH = "push"
 MONITOR_TYPE_ICMP = "icmp"
 MONITOR_TYPE_TCP = "tcp"
 MONITOR_TYPE_DNS = "dns"
+MONITOR_TYPE_DOCKER = "docker"
 
 UPTIME_STATUS_UP = "UP"
 
