@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -77,14 +77,16 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "uptime_status")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor's uptime status is UP."""
-        status = self._monitor_data.get("uptimeStatus")
+        status: str | None = self._monitor_data.get("uptimeStatus")
         if status is None:
             return None
         return status == UPTIME_STATUS_UP
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return monitor configuration as extra state attributes."""
         data = self._monitor_data
@@ -197,6 +199,7 @@ class KuvaszEnabledBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "enabled")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor is enabled."""
         enabled = self._monitor_data.get("enabled")
@@ -220,14 +223,16 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "ssl_status")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the SSL certificate is invalid (problem detected)."""
-        status = self._monitor_data.get("sslStatus")
+        status: str | None = self._monitor_data.get("sslStatus")
         if status is None:
             return None
         return status == SSL_STATUS_INVALID
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return SSL certificate details as extra state attributes."""
         data = self._monitor_data

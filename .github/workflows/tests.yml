@@ -22,6 +22,8 @@ jobs:
         run: python3 -m ruff check .
       - name: Format
         run: python3 -m ruff format . --check
+      - name: Type check
+        run: python3 -m mypy
       - name: Run tests
         run: pytest tests/ -q --cov
       - name: HACS validation

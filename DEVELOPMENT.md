@@ -22,10 +22,26 @@ python3 -m ruff check .
 python3 -m ruff check . --fix
 ```
 
+## Type checking
+
+The integration is checked with mypy in strict mode, using the same flags as Home Assistant core (see `mypy.ini`):
+
+```bash
+python3 -m mypy
+```
+
 ## Running tests
 
 ```bash
 pytest tests/ -v
+```
+
+CI runs the suite with `--cov` and fails below 95% coverage (configured in `.coveragerc`).
+
+Entity states and diagnostics are covered by snapshot tests (`tests/snapshots/`). After an intended change to entities or diagnostics output, regenerate them and review the diff:
+
+```bash
+pytest tests/ --snapshot-update
 ```
 
 The test suite uses `pytest-homeassistant-custom-component`, which provides a real (but minimal) HA instance. No running Home Assistant or Kuvasz instance is needed - all HTTP calls are mocked.

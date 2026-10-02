@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -120,9 +120,12 @@ class KuvaszUptimePercentageSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", "uptime_ratio")
 
     @property
+    @override
     def native_value(self) -> float | None:
         """Return uptime ratio as a percentage (0-100)."""
-        ratio = self._monitor_stats.get("uptimeHistory", {}).get("uptimeRatio")
+        ratio: float | None = self._monitor_stats.get("uptimeHistory", {}).get(
+            "uptimeRatio"
+        )
         if ratio is None:
             return None
         return round(ratio * 100, 4)
@@ -144,12 +147,14 @@ class KuvaszAvgResponseTimeSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", "average_latency_in_ms")
 
     @property
+    @override
     def native_value(self) -> float | None:
         """Return average response latency in milliseconds."""
         latency_stats = self._monitor_stats.get("latencyStats")
         if latency_stats is None:
             return None
-        return latency_stats.get("averageLatencyInMs")
+        latency: float | None = latency_stats.get("averageLatencyInMs")
+        return latency
 
 
 class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
@@ -167,12 +172,14 @@ class KuvaszAvgPacketLossSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", "average_packet_loss")
 
     @property
+    @override
     def native_value(self) -> float | None:
         """Return average packet loss as a percentage."""
         packet_loss_stats = self._monitor_stats.get("packetLossStats")
         if packet_loss_stats is None:
             return None
-        return packet_loss_stats.get("averagePacketLossPercentage")
+        packet_loss: float | None = packet_loss_stats.get("averagePacketLossPercentage")
+        return packet_loss
 
 
 class KuvaszAvgCpuUsageSensor(KuvaszMonitorEntity, SensorEntity):
@@ -190,12 +197,14 @@ class KuvaszAvgCpuUsageSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", "average_cpu_usage")
 
     @property
+    @override
     def native_value(self) -> float | None:
         """Return average CPU usage as a percentage."""
         cpu_stats = self._monitor_stats.get("cpuStats")
         if cpu_stats is None:
             return None
-        return cpu_stats.get("averageCpuUsagePercentage")
+        cpu_usage: float | None = cpu_stats.get("averageCpuUsagePercentage")
+        return cpu_usage
 
 
 class KuvaszAvgMemoryUsageSensor(KuvaszMonitorEntity, SensorEntity):
@@ -215,12 +224,14 @@ class KuvaszAvgMemoryUsageSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", "average_memory_usage")
 
     @property
+    @override
     def native_value(self) -> int | None:
         """Return average memory usage in bytes."""
         memory_stats = self._monitor_stats.get("memoryStats")
         if memory_stats is None:
             return None
-        return memory_stats.get("averageMemoryUsageBytes")
+        memory_usage: int | None = memory_stats.get("averageMemoryUsageBytes")
+        return memory_usage
 
 
 class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):
@@ -242,6 +253,7 @@ class KuvaszTimestampSensor(KuvaszMonitorEntity, SensorEntity):
         self.entity_id = self._build_entity_id("sensor", description.key)
 
     @property
+    @override
     def native_value(self) -> datetime | None:
         """Return the parsed datetime value from the monitor data."""
         raw = self._monitor_data.get(self._description.monitor_data_key)

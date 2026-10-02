@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.kuvasz_uptime.api import (
     KuvaszApiError,
@@ -109,6 +110,11 @@ class TestCoordinatorFetch:
         await coordinator.async_refresh()
 
         assert coordinator.last_update_success is False
+        assert isinstance(coordinator.last_exception, UpdateFailed)
+        assert coordinator.last_exception.translation_key == "update_failed"
+        assert coordinator.last_exception.translation_placeholders == {
+            "error": "network down"
+        }
 
     async def test_raises_auth_failed_on_auth_error(self, hass):
         client = _make_client()
@@ -119,6 +125,7 @@ class TestCoordinatorFetch:
 
         assert coordinator.last_update_success is False
         assert isinstance(coordinator.last_exception, ConfigEntryAuthFailed)
+        assert coordinator.last_exception.translation_key == "auth_failed"
 
     async def test_stats_fetch_failure_does_not_crash_coordinator(self, hass):
         """A stats fetch error for one monitor should not abort the whole update."""

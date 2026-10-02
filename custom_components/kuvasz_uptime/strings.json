@@ -111,6 +111,12 @@
     }
   },
   "exceptions": {
+    "auth_failed": {
+      "message": "The API key was rejected by your Kuvasz instance."
+    },
+    "update_failed": {
+      "message": "Error communicating with your Kuvasz instance: {error}"
+    },
     "enable_failed": {
       "message": "Failed to enable monitor {monitor}: {error}"
     },

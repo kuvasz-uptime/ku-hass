@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, override
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -45,6 +45,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         return self.coordinator.data.monitor(self._monitor_type, self._monitor_id)
 
     @property
+    @override
     def available(self) -> bool:
         """Return False once the monitor is no longer reported by the instance."""
         return super().available and bool(self._monitor_data)
@@ -59,6 +60,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         return self.coordinator.entry_id
 
     @property
+    @override
     def device_info(self) -> DeviceInfo:
         """Return device registry information for this monitor."""
         spec = MONITOR_TYPES_BY_KEY.get(self._monitor_type)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -90,6 +90,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
         )
         self._stats_period = stats_period
 
+    @override
     async def _async_update_data(self) -> KuvaszCoordinatorData:
         try:
             settings = await self.client.get_settings()
@@ -105,11 +106,15 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                 ]
             stats = await self._fetch_stats(monitors)
         except KuvaszAuthError as err:
-            msg = "The API key was rejected by your Kuvasz instance"
-            raise ConfigEntryAuthFailed(msg) from err
+            raise ConfigEntryAuthFailed(
+                translation_domain=DOMAIN, translation_key="auth_failed"
+            ) from err
         except KuvaszApiError as err:
-            msg = f"Error during communication with your Kuvasz instance: {err}"
-            raise UpdateFailed(msg) from err
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
         return KuvaszCoordinatorData(
             monitors=monitors,

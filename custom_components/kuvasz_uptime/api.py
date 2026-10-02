@@ -83,11 +83,13 @@ class KuvaszClient:
 
     async def get_settings(self) -> dict[str, Any]:
         """Return the Kuvasz instance settings."""
-        return await self._get("/api/v2/settings")
+        settings: dict[str, Any] = await self._get("/api/v2/settings")
+        return settings
 
     async def get_monitors(self, monitor_type: MonitorType) -> list[dict[str, Any]]:
         """Return all monitors of the given type."""
-        return await self._get(monitor_type.api_path)
+        monitors: list[dict[str, Any]] = await self._get(monitor_type.api_path)
+        return monitors
 
     async def patch_monitor(
         self, monitor_type: MonitorType, monitor_id: int, data: dict[str, Any]
@@ -99,9 +101,10 @@ class KuvaszClient:
         self, monitor_type: MonitorType, monitor_id: int, period: str
     ) -> dict[str, Any]:
         """Return statistics for a monitor over the given period."""
-        return await self._get(
+        stats: dict[str, Any] = await self._get(
             f"{monitor_type.api_path}/{monitor_id}/stats", params={"period": period}
         )
+        return stats
 
     async def get_all_monitors(
         self, monitor_types: Sequence[MonitorType]

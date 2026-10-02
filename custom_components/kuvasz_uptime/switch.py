@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.exceptions import HomeAssistantError
@@ -46,6 +46,7 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
         self.entity_id = self._build_entity_id("switch", "enabled")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor is currently enabled."""
         enabled = self._monitor_data.get("enabled")
@@ -53,10 +54,12 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
             return None
         return bool(enabled)
 
+    @override
     async def async_turn_on(self, **_kwargs: Any) -> None:
         """Enable the monitor."""
         await self._set_enabled(enabled=True)
 
+    @override
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Disable the monitor."""
         await self._set_enabled(enabled=False)

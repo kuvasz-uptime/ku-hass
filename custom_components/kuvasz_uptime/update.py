@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from homeassistant.components.update import UpdateEntity
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -43,6 +43,7 @@ class KuvaszUpdateEntity(CoordinatorEntity["KuvaszCoordinator"], UpdateEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_update"
 
     @property
+    @override
     def device_info(self) -> DeviceInfo:
         """Return device info for the Kuvasz server hub device."""
         return DeviceInfo(
@@ -52,16 +53,19 @@ class KuvaszUpdateEntity(CoordinatorEntity["KuvaszCoordinator"], UpdateEntity):
         )
 
     @property
+    @override
     def installed_version(self) -> str | None:
         """Return the currently installed Kuvasz version."""
         return self.coordinator.data.version_info.get("installedVersion")
 
     @property
+    @override
     def latest_version(self) -> str | None:
         """Return the latest Kuvasz version, or None if update checks are disabled."""
         return self.coordinator.data.version_info.get("latestVersion")
 
     @property
+    @override
     def release_url(self) -> str | None:
         """Return a URL to the release notes for the latest version."""
         return self.coordinator.data.version_info.get("latestVersionDetails")

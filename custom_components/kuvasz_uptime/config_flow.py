@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 import voluptuous as vol
 from homeassistant.config_entries import (
@@ -17,6 +17,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     BooleanSelector,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -116,7 +117,7 @@ def _build_monitors_schema(
     *,
     include_settings: bool,
 ) -> vol.Schema:
-    options = [
+    options: list[SelectOptionDict] = [
         {
             "value": _monitor_key(m),
             "label": f"{m['name']} ({m['_type'].upper()})",
@@ -173,10 +174,12 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
+    @override
     def async_get_options_flow(_config_entry: ConfigEntry) -> KuvaszOptionsFlowHandler:
         """Return the options flow handler."""
         return KuvaszOptionsFlowHandler()
 
+    @override
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
