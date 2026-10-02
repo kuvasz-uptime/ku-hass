@@ -123,10 +123,13 @@ class KuvaszClient:
             *(self.get_monitors(m) for m in monitor_types), return_exceptions=True
         )
 
-        monitors: list[dict[str, Any]] = []
-        for monitor_type, result in zip(monitor_types, results, strict=True):
+        # A rejected key must win over other failures so that it triggers reauth.
+        for result in results:
             if isinstance(result, KuvaszAuthError):
                 raise result
+
+        monitors: list[dict[str, Any]] = []
+        for monitor_type, result in zip(monitor_types, results, strict=True):
             if isinstance(result, BaseException):
                 msg = f"Failed to fetch {monitor_type.key} monitors: {result}"
                 raise KuvaszApiError(msg) from result

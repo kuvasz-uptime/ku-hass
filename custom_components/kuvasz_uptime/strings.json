@@ -63,7 +63,7 @@
     },
     "abort": {
       "already_configured": "This instance is already configured.",
-      "different_instance": "None of this entry's monitors exist with the same name on the new host, so it looks like a different Kuvasz instance. Add it as a new integration entry instead.",
+      "different_instance": "Most of this entry's monitors are missing on the new host or don't match the ones it knows, so it looks like a different Kuvasz instance. Add it as a new integration entry instead.",
       "reauth_successful": "Reauthentication was successful.",
       "reconfigure_successful": "Reconfiguration was successful."
     }

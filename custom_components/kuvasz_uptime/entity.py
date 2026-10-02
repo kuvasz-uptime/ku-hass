@@ -21,12 +21,20 @@ def server_device_identifier(entry_id: str) -> tuple[str, str]:
     return (DOMAIN, f"{entry_id}_server")
 
 
+def monitor_device_identifier(
+    entry_id: str, monitor_type: str, monitor_id: int
+) -> tuple[str, str]:
+    """Return the device identifier of a monitor device."""
+    return (DOMAIN, f"{entry_id}_{monitor_type}_{monitor_id}")
+
+
 def server_device_info(coordinator: KuvaszCoordinator) -> DeviceInfo:
     """Return device registry information for the Kuvasz server itself."""
     entry = coordinator.config_entry
     return DeviceInfo(
         identifiers={server_device_identifier(entry.entry_id)},
-        name="Kuvasz Server",
+        # Named after the entry so that several instances can be told apart.
+        name=entry.title,
         manufacturer=MANUFACTURER,
         sw_version=coordinator.data.version_info.get("installedVersion"),
         entry_type=DeviceEntryType.SERVICE,
@@ -86,9 +94,12 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         """Return device registry information for this monitor."""
         spec = MONITOR_TYPES_BY_KEY.get(self._monitor_type)
         type_label = spec.device_label if spec else self._monitor_type.upper()
-        monitor_ident = f"{self._instance_key}_{self._monitor_type}_{self._monitor_id}"
         info = DeviceInfo(
-            identifiers={(DOMAIN, monitor_ident)},
+            identifiers={
+                monitor_device_identifier(
+                    self._instance_key, self._monitor_type, self._monitor_id
+                )
+            },
             name=self._monitor_name,
             manufacturer=MANUFACTURER,
             model=f"{type_label} Monitor",

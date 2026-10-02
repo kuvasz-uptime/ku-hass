@@ -498,6 +498,7 @@ def make_config_entry(hass, entry_id="test_entry"):
     entry = MockConfigEntry(
         domain=DOMAIN,
         entry_id=entry_id,
+        title="Test Instance",
         data={"name": "Test Instance", "host": "http://kuvasz.local:8080"},
     )
     entry.add_to_hass(hass)
@@ -534,6 +535,7 @@ async def setup_full_integration(hass, platforms, settings=SETTINGS_RESPONSE):
     entry = MockConfigEntry(
         domain=DOMAIN,
         entry_id="test_entry",
+        title="Test Instance",
         unique_id="http://kuvasz.local:8080",
         data={
             "name": "Test Instance",

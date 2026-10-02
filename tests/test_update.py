@@ -135,7 +135,7 @@ class TestKuvaszUpdateEntity:
     async def test_device_info_name(self, hass):
         coordinator = _make_coordinator(hass, VERSION_INFO_UPDATE_AVAILABLE)
         entities = await _setup_integration(hass, coordinator)
-        assert entities[0].device_info["name"] == "Kuvasz Server"
+        assert entities[0].device_info["name"] == "Test Instance"
 
     async def test_has_entity_name(self, hass):
         coordinator = _make_coordinator(hass, VERSION_INFO_UPDATE_AVAILABLE)

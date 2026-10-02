@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import callback
@@ -20,10 +20,13 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_STATS_PERIOD,
     DEFAULT_VERIFY_SSL,
-    DOMAIN,
 )
-from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
-from .entity import server_device_info
+from .coordinator import KuvaszConfigEntry, KuvaszCoordinator, entry_value
+from .entity import (
+    monitor_device_identifier,
+    server_device_identifier,
+    server_device_info,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -31,11 +34,6 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH, Platform.UPDATE]
-
-
-def _entry_value(entry: KuvaszConfigEntry, key: str, default: Any | None = None) -> Any:
-    """Read a value from entry.options first, then entry.data, then default."""
-    return entry.options.get(key, entry.data.get(key, default))
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bool:
@@ -47,9 +45,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bo
         api_key=entry.data.get(CONF_API_KEY) or None,
         session=session,
     )
-    scan_interval = _entry_value(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    selected_monitors = _entry_value(entry, CONF_SELECTED_MONITORS)
-    stats_period = _entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD)
+    scan_interval = entry_value(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    selected_monitors = entry_value(entry, CONF_SELECTED_MONITORS)
+    stats_period = entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD)
     coordinator = KuvaszCoordinator(
         hass,
         entry,
@@ -64,15 +62,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bo
 
     # Monitor devices point at the server device via via_device_id, so it has to
     # exist before the platforms add their entities.
-    @callback
-    def _async_update_server_device() -> None:
-        device = dr.async_get(hass).async_get_or_create(
-            config_entry_id=entry.entry_id, **server_device_info(coordinator)
-        )
-        coordinator.server_device_id = device.id
+    dev_reg = dr.async_get(hass)
+    server_device = dev_reg.async_get_or_create(
+        config_entry_id=entry.entry_id, **server_device_info(coordinator)
+    )
+    coordinator.server_device_id = server_device.id
+    server_version = server_device.sw_version
 
-    _async_update_server_device()
-    entry.async_on_unload(coordinator.async_add_listener(_async_update_server_device))
+    @callback
+    def _async_sync_devices() -> None:
+        """Follow server upgrades and drop devices of monitors deleted in Kuvasz."""
+        nonlocal server_version
+        version = coordinator.data.version_info.get("installedVersion")
+        if version != server_version:
+            server_version = version
+            dev_reg.async_update_device(server_device.id, sw_version=version)
+        _remove_stale_devices(hass, entry, coordinator.data.monitors)
+
+    entry.async_on_unload(coordinator.async_add_listener(_async_sync_devices))
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -85,24 +92,18 @@ def _remove_stale_devices(
     """
     Remove devices (and their entities) for monitors no longer in the active set.
 
-    Device identifiers use format (DOMAIN, "{entry_id}_{type}_{id}") — see entity.py.
-    The server hub device (DOMAIN, "{entry_id}_server") is excluded and never removed.
-    Removing a device also removes all its entity registry entries.
+    The server hub device is never removed. Removing a device also removes all its
+    entity registry entries.
     """
     entry_id = entry.entry_id
-    active_keys = {f"{entry_id}_{m['_type']}_{m['id']}" for m in active_monitors}
-    active_keys.add(f"{entry_id}_server")
+    active = {
+        monitor_device_identifier(entry_id, m["_type"], m["id"])
+        for m in active_monitors
+    }
+    active.add(server_device_identifier(entry_id))
     dev_reg = dr.async_get(hass)
     for device_entry in dr.async_entries_for_config_entry(dev_reg, entry_id):
-        monitor_key = next(
-            (
-                identifier
-                for domain, identifier in device_entry.identifiers
-                if domain == DOMAIN
-            ),
-            None,
-        )
-        if monitor_key not in active_keys:
+        if not device_entry.identifiers & active:
             dev_reg.async_remove_device(device_entry.id)
 
 

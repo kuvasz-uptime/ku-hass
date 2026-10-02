@@ -26,6 +26,12 @@ _LOGGER = logging.getLogger(__name__)
 
 type KuvaszConfigEntry = ConfigEntry[KuvaszCoordinator]
 
+
+def entry_value(entry: ConfigEntry, key: str, default: Any | None = None) -> Any:
+    """Read a value from entry.options first, then entry.data, then default."""
+    return entry.options.get(key, entry.data.get(key, default))
+
+
 # Stats are fetched per monitor, so cap how many requests hit the instance at once.
 _MAX_PARALLEL_STATS_REQUESTS = 4
 
@@ -149,6 +155,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                     data = await self.client.get_monitor_stats(
                         spec, monitor_id, self._stats_period
                     )
+            except KuvaszAuthError:
+                raise
             except KuvaszApiError:
                 _LOGGER.debug("Could not fetch stats for monitor %s", key)
                 data = {}

@@ -1,7 +1,7 @@
 """Tests for the Kuvasz config flow."""
 
 from contextlib import contextmanager
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
@@ -758,14 +758,39 @@ class TestReconfigureFlow:
 
     async def _reconfigure_with_device(self, hass, device_name, host):
         """Reconfigure an entry whose http_1 device was last seen as `device_name`."""
+        return await self._reconfigure_with_devices(hass, {"http_1": device_name}, host)
+
+    async def _reconfigure_with_devices(self, hass, device_names, host):
+        """Reconfigure a not-loaded entry whose devices carry `device_names`."""
         entry = _make_existing_entry(hass)
-        dr.async_get(hass).async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, f"{entry.entry_id}_http_1")},
-            name=device_name,
-        )
+        for key, name in device_names.items():
+            dr.async_get(hass).async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, f"{entry.entry_id}_{key}")},
+                name=name,
+            )
         result = await entry.start_reconfigure_flow(hass)
         with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"host": host, "verify_ssl": True}
+            )
+            await hass.async_block_till_done()
+        return entry, result
+
+    async def _reconfigure_loaded(self, hass, known_monitors, host):
+        """Reconfigure a loaded entry whose coordinator last saw `known_monitors`."""
+        entry = _make_existing_entry(hass)
+        entry.mock_state(hass, config_entries.ConfigEntryState.LOADED)
+        entry.runtime_data = MagicMock()
+        entry.runtime_data.data.monitors = known_monitors
+        result = await entry.start_reconfigure_flow(hass)
+        with (
+            _patched_client(),
+            patch(
+                "custom_components.kuvasz_uptime.async_unload_entry",
+                return_value=True,
+            ),
+        ):
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"], {"host": host, "verify_ssl": True}
             )
@@ -789,6 +814,65 @@ class TestReconfigureFlow:
         assert result["reason"] == "different_instance"
         assert entry.data["host"] == "http://kuvasz.local:8080"
         mock_setup_entry.assert_not_called()
+
+    async def test_one_coincidental_name_is_not_enough(self, hass, mock_setup_entry):
+        """Two unrelated instances may share a monitor; most must match."""
+        entry, result = await self._reconfigure_with_devices(
+            hass,
+            {"http_1": HTTP_MONITOR_UP["name"], "push_20": "Their Cron Job"},
+            "http://other.local:8080",
+        )
+
+        assert result["reason"] == "different_instance"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+
+    async def test_loaded_entry_matches_renamed_monitors_by_creation_time(
+        self, hass, mock_setup_entry
+    ):
+        # Same instants, rendered in another timezone by the moved instance.
+        known = [
+            {**m, "name": f"Old {m['name']}", "createdAt": "2024-01-01T02:00:00+02:00"}
+            for m in ALL_MONITORS
+        ]
+        entry, result = await self._reconfigure_loaded(
+            hass, known, "http://10.0.0.7:8080"
+        )
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "http://10.0.0.7:8080"
+
+    async def test_loaded_entry_rejects_same_names_created_at_other_times(
+        self, hass, mock_setup_entry
+    ):
+        known = [{**m, "createdAt": "2023-05-05T10:00:00Z"} for m in ALL_MONITORS]
+        entry, result = await self._reconfigure_loaded(
+            hass, known, "http://other.local:8080"
+        )
+
+        assert result["reason"] == "different_instance"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+
+    async def test_flow_in_progress_for_new_host_does_not_abort(
+        self, hass, mock_setup_entry
+    ):
+        entry = _make_existing_entry(hass)
+        with _patched_client():
+            pending = await _start_flow(hass)
+            pending = await hass.config_entries.flow.async_configure(
+                pending["flow_id"],
+                {**CREDENTIALS, "name": "Other", "host": "http://10.0.0.7:8080"},
+            )
+        assert pending["step_id"] == "monitors"
+
+        result = await entry.start_reconfigure_flow(hass)
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"host": "http://10.0.0.7:8080", "verify_ssl": True}
+            )
+            await hass.async_block_till_done()
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "http://10.0.0.7:8080"
 
     async def test_same_host_skips_instance_check(self, hass, mock_setup_entry):
         _, result = await self._reconfigure_with_device(
