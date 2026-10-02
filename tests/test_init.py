@@ -221,7 +221,7 @@ class TestDeviceHierarchy:
 
         server = _server_device(hass, entry)
         assert server is not None
-        assert server.name == "Kuvasz Server"
+        assert server.name == "Test Instance"
         assert server.sw_version == "2.1.0"
         assert server.entry_type is dr.DeviceEntryType.SERVICE
         assert server.configuration_url == "http://kuvasz.local:8080"
@@ -269,6 +269,44 @@ class TestDeviceHierarchy:
         await coordinator.async_refresh()
 
         assert _server_device(hass, entry).sw_version == "2.2.0"
+
+
+class TestRuntimeStaleDevices:
+    async def test_monitor_deleted_in_kuvasz_loses_its_device(self, hass):
+        entry = await setup_full_integration(hass, [Platform.BINARY_SENSOR])
+        coordinator = entry.runtime_data
+        dev_reg = dr.async_get(hass)
+        ent_reg = er.async_get(hass)
+        gone = dev_reg.async_get_device_by_identifier(
+            (DOMAIN, f"{entry.entry_id}_http_2"), entry.entry_id
+        )
+        assert gone is not None
+        assert er.async_entries_for_device(ent_reg, gone.id)
+
+        coordinator.client.get_all_monitors.return_value = [
+            dict(m) for m in MONITORS if (m["_type"], m["id"]) != ("http", 2)
+        ]
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert dev_reg.async_get(gone.id) is None
+        assert er.async_entries_for_device(ent_reg, gone.id) == []
+        assert _server_device(hass, entry) is not None
+        remaining = dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
+        assert len(remaining) == len(MONITORS)  # the other monitors + the server
+
+    async def test_failed_refresh_keeps_devices(self, hass):
+        entry = await setup_full_integration(hass, [Platform.BINARY_SENSOR])
+        coordinator = entry.runtime_data
+        dev_reg = dr.async_get(hass)
+        before = len(dr.async_entries_for_config_entry(dev_reg, entry.entry_id))
+
+        coordinator.client.get_all_monitors.side_effect = KuvaszApiError("down")
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is False
+        after = dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
+        assert len(after) == before
 
 
 class TestEntryLifecycle:

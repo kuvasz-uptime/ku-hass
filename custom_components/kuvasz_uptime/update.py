@@ -45,8 +45,6 @@ class KuvaszUpdateEntity(CoordinatorEntity[KuvaszCoordinator], UpdateEntity):
         super().__init__(coordinator)
         entry_id = coordinator.config_entry.entry_id
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_update"
-        # Keep the entity ID it had when the entity was still named "Kuvasz Update".
-        self.entity_id = "update.kuvasz_server_kuvasz_update"
 
     @property
     @override

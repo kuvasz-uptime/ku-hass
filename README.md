@@ -22,7 +22,7 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | Average Memory Usage | Sensor (`MiB`, `data_size`)    | Docker (when metrics history is enabled)                |
 | SSL Valid Until      | Sensor (`timestamp`)           | HTTP (when SSL check is enabled)                        |
 | Last Heartbeat       | Sensor (`timestamp`)           | Push                                                    |
-| Kuvasz Server        | Update                         | Integration (when update checks are enabled)            |
+| Server version       | Update                         | Integration (when update checks are enabled)            |
 
 **Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise. Extra attributes:
 
@@ -49,9 +49,9 @@ For Docker monitors, `image` is the image the container was created from, as the
 
 **Enabled switch** lets you pause and resume a monitor directly from Home Assistant. It is only created for monitor types that are writable in your Kuvasz instance. Read-only monitor types (e.g. managed via YAML/GitOps) only get the binary sensor.
 
-**Kuvasz Server** (`update.kuvasz_server_kuvasz_update`) tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance.
+**Server version update entity** tracks the installed and latest available version of your Kuvasz instance. It belongs to the server device and takes its name. It is only created when update checks are enabled on your Kuvasz instance.
 
-Every integration entry also has a **Kuvasz Server** device, which shows the installed Kuvasz version and links to your instance's web UI. The monitor devices are listed as connected through it.
+Every integration entry also has a server device, named after the entry (e.g. **Home Kuvasz**), which shows the installed Kuvasz version and links to your instance's web UI. The monitor devices are listed as connected through it.
 
 ## Requirements
 
@@ -102,7 +102,7 @@ You can change options later via the **Configure** button on the integration car
 - **Stats period** - the time window used for uptime percentage and response time stats (default: 24 h)
 - **Monitor selection** - add or remove monitors without re-adding the integration
 
-Monitors that are deselected are removed from the HA device registry (including all their entities).
+Monitors that are deselected, or deleted in Kuvasz, are removed from the HA device registry (including all their entities).
 
 To change the instance URL, API key or SSL verification, choose **Reconfigure** from the integration entry's menu. If your API key is rotated or revoked, Home Assistant prompts you to re-authenticate with the new key under **Settings → Devices & Services**.
 
@@ -179,7 +179,6 @@ automation:
 
 - Monitors created in Kuvasz after the integration was set up are not added automatically. Select them via **Configure**.
 - Entities are created when the integration loads. If you enable SSL checks or metrics history on a monitor, or change which monitor types are read-only in Kuvasz, reload the integration to add or remove the matching entities.
-- A monitor deleted in Kuvasz shows its entities as unavailable until the integration is reloaded, which then removes its device.
 - The **Enabled** switch is only available for monitor types that are writable in your Kuvasz instance.
 - Status pages and notification integrations configured in Kuvasz are not exposed in Home Assistant.
 - Each poll makes one statistics request per selected monitor. With many monitors, consider a longer polling interval.
@@ -201,7 +200,7 @@ Check the API key in your Kuvasz configuration. If the key changed after setup, 
 - Check that the monitor is selected under **Configure**.
 - Average latency, packet loss, CPU and memory sensors only exist when latency or metrics history is enabled on the monitor. SSL sensors only exist when the SSL check is enabled. Reload the integration after changing these in Kuvasz.
 - The **Enabled** switch is missing when the monitor type is read-only in Kuvasz.
-- The update entity of the **Kuvasz Server** device only exists when update checks are enabled on your instance.
+- The update entity of the server device only exists when update checks are enabled on your instance.
 
 **Collecting information for a bug report**
 

@@ -153,6 +153,20 @@ class TestCoordinatorFetch:
         assert coordinator.last_update_success is True
         assert coordinator.data.monitor_stats("http", 1) == {}
 
+    async def test_stats_auth_error_triggers_reauth(self, hass):
+        """A rejected key on the stats endpoints must not be swallowed."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP], stats_error=KuvaszAuthError("bad key")
+        )
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is False
+        assert isinstance(coordinator.last_exception, ConfigEntryAuthFailed)
+
     async def test_stats_requests_have_bounded_concurrency(self, hass):
         monitors = [{**HTTP_MONITOR_UP, "id": i} for i in range(12)]
         client = _make_client(monitors=monitors)

@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszClient
+from custom_components.kuvasz_uptime.api import (
+    KuvaszApiError,
+    KuvaszAuthError,
+    KuvaszClient,
+)
 from custom_components.kuvasz_uptime.const import DOMAIN
 from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
@@ -336,3 +340,30 @@ class TestEnabledSwitchErrors:
             "error": "API error 500",
         }
         coordinator.async_request_refresh.assert_not_awaited()
+
+    async def test_auth_error_starts_reauth(self, hass):
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
+        coordinator.client.patch_monitor = AsyncMock(
+            side_effect=KuvaszAuthError("Invalid API key")
+        )
+        entities = await _setup_integration(hass, coordinator)
+
+        with pytest.raises(HomeAssistantError):
+            await entities[0].async_turn_off()
+        await hass.async_block_till_done()
+
+        flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        assert [flow["context"]["source"] for flow in flows] == ["reauth"]
+
+    async def test_other_errors_do_not_start_reauth(self, hass):
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
+        coordinator.client.patch_monitor = AsyncMock(
+            side_effect=KuvaszApiError("API error 500")
+        )
+        entities = await _setup_integration(hass, coordinator)
+
+        with pytest.raises(HomeAssistantError):
+            await entities[0].async_turn_off()
+        await hass.async_block_till_done()
+
+        assert hass.config_entries.flow.async_progress_by_handler(DOMAIN) == []

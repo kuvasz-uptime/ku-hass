@@ -15,6 +15,7 @@ from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
 from .const import DEFAULT_STATS_PERIOD, DOMAIN
 from .monitor_types import (
     MONITOR_TYPES_BY_KEY,
+    monitor_key,
     read_only_monitor_types,
     supported_monitor_types,
 )
@@ -25,6 +26,12 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 type KuvaszConfigEntry = ConfigEntry[KuvaszCoordinator]
+
+
+def entry_value(entry: ConfigEntry, key: str, default: Any | None = None) -> Any:
+    """Read a value from entry.options first, then entry.data, then default."""
+    return entry.options.get(key, entry.data.get(key, default))
+
 
 # Stats are fetched per monitor, so cap how many requests hit the instance at once.
 _MAX_PARALLEL_STATS_REQUESTS = 4
@@ -57,7 +64,7 @@ class KuvaszCoordinatorData:
 
     def monitor_stats(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
         """Return stats dict for the given monitor, or empty dict if unavailable."""
-        return self.stats.get(f"{monitor_type}_{monitor_id}", {})
+        return self.stats.get(monitor_key(monitor_type, monitor_id), {})
 
     def is_read_only(self, monitor_type: str) -> bool:
         """Return True if monitors of the given type cannot be modified via the API."""
@@ -110,7 +117,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                 monitors = [
                     m
                     for m in monitors
-                    if f"{m['_type']}_{m['id']}" in self._selected_monitors
+                    if monitor_key(m["_type"], m["id"]) in self._selected_monitors
                 ]
             stats = await self._fetch_stats(monitors)
         except KuvaszAuthError as err:
@@ -140,7 +147,7 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
         async def _get_stats(monitor: dict[str, Any]) -> tuple[str, dict[str, Any]]:
             monitor_type = monitor["_type"]
             monitor_id = monitor["id"]
-            key = f"{monitor_type}_{monitor_id}"
+            key = monitor_key(monitor_type, monitor_id)
             spec = MONITOR_TYPES_BY_KEY.get(monitor_type)
             if spec is None:
                 return key, {}
@@ -149,6 +156,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                     data = await self.client.get_monitor_stats(
                         spec, monitor_id, self._stats_period
                     )
+            except KuvaszAuthError:
+                raise
             except KuvaszApiError:
                 _LOGGER.debug("Could not fetch stats for monitor %s", key)
                 data = {}

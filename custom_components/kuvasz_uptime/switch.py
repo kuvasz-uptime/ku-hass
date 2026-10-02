@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, override
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.exceptions import HomeAssistantError
 
-from .api import KuvaszApiError
+from .api import KuvaszApiError, KuvaszAuthError
 from .const import DOMAIN
 from .entity import KuvaszMonitorEntity
 from .monitor_types import MONITOR_TYPES_BY_KEY
@@ -74,6 +74,9 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
                 {"enabled": enabled},
             )
         except KuvaszApiError as err:
+            if isinstance(err, KuvaszAuthError):
+                # Ask for a new key now instead of waiting for the next poll.
+                self.coordinator.config_entry.async_start_reauth(self.coordinator.hass)
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="enable_failed" if enabled else "disable_failed",

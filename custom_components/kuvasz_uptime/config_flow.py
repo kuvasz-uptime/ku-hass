@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, override
 import voluptuous as vol
 from homeassistant.config_entries import (
     ConfigEntry,
+    ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlowWithReload,
@@ -26,6 +27,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
+from homeassistant.util import dt as dt_util
 
 from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
 from .const import (
@@ -42,8 +44,9 @@ from .const import (
     MIN_SCAN_INTERVAL,
     STATS_PERIOD_OPTIONS,
 )
-from .entity import server_device_identifier
-from .monitor_types import supported_monitor_types
+from .coordinator import entry_value
+from .entity import monitor_device_identifier, server_device_identifier
+from .monitor_types import monitor_key, supported_monitor_types
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -113,8 +116,14 @@ async def _async_validate_connection(
     return {}, monitors
 
 
-def _monitor_key(monitor: dict[str, Any]) -> str:
-    return f"{monitor['_type']}_{monitor['id']}"
+def _is_same_monitor(old: Mapping[str, Any], new: Mapping[str, Any]) -> bool:
+    """Compare creation times when both sides know them, else names."""
+    # Kuvasz renders timestamps in the server's timezone, so compare instants.
+    old_created = dt_util.parse_datetime(old.get("createdAt") or "")
+    new_created = dt_util.parse_datetime(new.get("createdAt") or "")
+    if old_created is not None and new_created is not None:
+        return old_created == new_created
+    return old.get("name") == new.get("name")
 
 
 def _is_same_instance(
@@ -124,20 +133,38 @@ def _is_same_instance(
     Guess whether `monitors` come from the instance the entry was set up with.
 
     Kuvasz exposes no instance ID, and monitor IDs restart from 1 on every
-    instance, so a type+id match alone proves nothing. A monitor that also kept
-    its name does. Entries without monitor devices have nothing to compare.
+    instance, so a type+id match alone proves nothing. A loaded entry still has
+    its monitors' creation times, which survive renames and differ between
+    instances; otherwise only the device names are left to compare. Most of the
+    entry's monitors have to match, so one coincidental match isn't enough.
+    Entries without monitors have nothing to compare.
     """
-    names = {f"{entry.entry_id}_{_monitor_key(m)}": m["name"] for m in monitors}
-    server = server_device_identifier(entry.entry_id)[1]
-    known = [
-        (identifier, device.name)
-        for device in dr.async_entries_for_config_entry(
-            dr.async_get(hass), entry.entry_id
-        )
-        for domain, identifier in device.identifiers
-        if domain == DOMAIN and identifier != server
-    ]
-    return not known or any(names.get(key) == name for key, name in known)
+    entry_id = entry.entry_id
+    new = {
+        monitor_device_identifier(entry_id, m["_type"], m["id"]): m for m in monitors
+    }
+    known: dict[tuple[str, str], Mapping[str, Any]]
+    if entry.state is ConfigEntryState.LOADED:
+        known = {
+            monitor_device_identifier(entry_id, m["_type"], m["id"]): m
+            for m in entry.runtime_data.data.monitors
+        }
+    else:
+        server = server_device_identifier(entry_id)
+        known = {
+            identifier: {"name": device.name}
+            for device in dr.async_entries_for_config_entry(
+                dr.async_get(hass), entry_id
+            )
+            for identifier in device.identifiers
+            if identifier != server
+        }
+    matches = sum(
+        1
+        for key, old in known.items()
+        if key in new and _is_same_monitor(old, new[key])
+    )
+    return not known or matches * 2 > len(known)
 
 
 def _build_monitors_schema(
@@ -150,7 +177,7 @@ def _build_monitors_schema(
 ) -> vol.Schema:
     options: list[SelectOptionDict] = [
         {
-            "value": _monitor_key(m),
+            "value": monitor_key(m["_type"], m["id"]),
             "label": f"{m['name']} ({m['_type'].upper()})",
         }
         for m in monitors
@@ -326,7 +353,8 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
             verify_ssl = user_input[CONF_VERIFY_SSL]
 
             if host != entry.data[CONF_HOST]:
-                await self.async_set_unique_id(host)
+                # Another flow for the same host must not abort this one.
+                await self.async_set_unique_id(host, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
             errors, monitors = await _async_validate_connection(
@@ -386,16 +414,13 @@ class KuvaszOptionsFlowHandler(OptionsFlowWithReload):
         if errors:
             return self.async_abort(reason=errors["base"])
 
-        def _current(key: str, default: Any = None) -> Any:
-            return entry.options.get(key, entry.data.get(key, default))
-
         return self.async_show_form(
             step_id="init",
             data_schema=_build_monitors_schema(
                 monitors,
-                _current(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                _current(CONF_SELECTED_MONITORS),
-                _current(CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD),
+                entry_value(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                entry_value(entry, CONF_SELECTED_MONITORS),
+                entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD),
                 include_settings=True,
             ),
         )

@@ -83,6 +83,15 @@ MONITOR_TYPES: tuple[MonitorType, ...] = (
 MONITOR_TYPES_BY_KEY: dict[str, MonitorType] = {m.key: m for m in MONITOR_TYPES}
 
 
+def monitor_key(monitor_type: str, monitor_id: int) -> str:
+    """
+    Return the key identifying a monitor within an instance, e.g. "http_1".
+
+    Saved monitor selections, stats lookups and device identifiers all use it.
+    """
+    return f"{monitor_type}_{monitor_id}"
+
+
 def _editability(settings: Mapping[str, Any]) -> Mapping[str, Any]:
     editability: Mapping[str, Any] = settings.get("app", {}).get("editabilityState", {})
     return editability

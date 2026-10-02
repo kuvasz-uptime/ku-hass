@@ -223,6 +223,16 @@ class TestGetMonitors:
         with pytest.raises(KuvaszAuthError):
             await client.get_all_monitors(legacy)
 
+    async def test_get_all_monitors_auth_error_wins_over_other_failures(
+        self, client, mock_api
+    ):
+        """A 401 on a later type must not be masked by an earlier type's error."""
+        mock_api.get(f"{BASE_URL}/api/v2/http-monitors", status=503)
+        mock_api.get(f"{BASE_URL}/api/v2/push-monitors", status=401)
+        legacy = tuple(m for m in MONITOR_TYPES if not m.optional)
+        with pytest.raises(KuvaszAuthError):
+            await client.get_all_monitors(legacy)
+
     async def test_get_all_monitors_empty_types(self, client, mock_api):
         assert await client.get_all_monitors(()) == []
         assert mock_api.mock_calls == []
