@@ -1,5 +1,6 @@
 """Tests for the Kuvasz DataUpdateCoordinator."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -10,6 +11,7 @@ from custom_components.kuvasz_uptime.api import (
     KuvaszClient,
 )
 from custom_components.kuvasz_uptime.coordinator import (
+    _MAX_PARALLEL_STATS_REQUESTS,
     KuvaszCoordinator,
 )
 from tests.conftest import (
@@ -130,6 +132,30 @@ class TestCoordinatorFetch:
 
         assert coordinator.last_update_success is True
         assert coordinator.data.monitor_stats("http", 1) == {}
+
+    async def test_stats_requests_have_bounded_concurrency(self, hass):
+        monitors = [{**HTTP_MONITOR_UP, "id": i} for i in range(12)]
+        client = _make_client(monitors=monitors)
+        in_flight = 0
+        peak = 0
+
+        async def _stats(spec, monitor_id, period):
+            nonlocal in_flight, peak
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0)
+            in_flight -= 1
+            return HTTP_MONITOR_STATS
+
+        client.get_monitor_stats = AsyncMock(side_effect=_stats)
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is True
+        assert client.get_monitor_stats.await_count == 12
+        assert peak == _MAX_PARALLEL_STATS_REQUESTS
+        assert len(coordinator.data.stats) == 12
 
     async def test_empty_monitor_list(self, hass):
         client = _make_client(monitors=[])

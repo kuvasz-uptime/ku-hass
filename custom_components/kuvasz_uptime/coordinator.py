@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Stats are fetched per monitor, so cap how many requests hit the instance at once.
+_MAX_PARALLEL_STATS_REQUESTS = 4
+
 
 class KuvaszCoordinatorData:
     """Holds all fetched Kuvasz data."""
@@ -114,6 +117,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     async def _fetch_stats(
         self, monitors: list[dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
+        semaphore = asyncio.Semaphore(_MAX_PARALLEL_STATS_REQUESTS)
+
         async def _get_stats(monitor: dict[str, Any]) -> tuple[str, dict[str, Any]]:
             monitor_type = monitor["_type"]
             monitor_id = monitor["id"]
@@ -122,9 +127,10 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             if spec is None:
                 return key, {}
             try:
-                data = await self.client.get_monitor_stats(
-                    spec, monitor_id, self._stats_period
-                )
+                async with semaphore:
+                    data = await self.client.get_monitor_stats(
+                        spec, monitor_id, self._stats_period
+                    )
             except KuvaszApiError:
                 _LOGGER.debug("Could not fetch stats for monitor %s", key)
                 data = {}
