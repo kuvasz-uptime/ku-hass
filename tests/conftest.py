@@ -68,6 +68,8 @@ HTTP_MONITOR_DOWN = {
     "uptimeStatus": "DOWN",
     "sslStatus": "INVALID",
     "sslCheckEnabled": True,
+    "uptimeError": "Reason: Connect Error: Connection refused: example.com/10.0.0.5",
+    "sslError": "SSL Handshake failed: PKIX path validation failed",
 }
 
 HTTP_MONITOR_NO_SSL = {
@@ -81,6 +83,7 @@ HTTP_MONITOR_NO_SSL = {
 PUSH_MONITOR_UP = {
     "id": 20,
     "name": "My Cron Job",
+    "clientSecret": "0b8c3f7e-2d41-4c9a-9e57-6f1a2b3c4d5e",
     "heartbeatInterval": 300,
     "gracePeriod": 60,
     "enabled": True,

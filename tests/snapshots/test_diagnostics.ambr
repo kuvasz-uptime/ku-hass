@@ -102,7 +102,7 @@
         'responseTimeThresholdMillis': None,
         'sensitiveUrl': False,
         'sslCheckEnabled': True,
-        'sslError': None,
+        'sslError': '**REDACTED**',
         'sslExpiryThreshold': 30,
         'sslStatus': 'INVALID',
         'sslStatusStartedAt': '2024-01-01T00:00:00Z',
@@ -111,13 +111,14 @@
         ]),
         'updatedAt': None,
         'uptimeCheckInterval': 60,
-        'uptimeError': None,
+        'uptimeError': '**REDACTED**',
         'uptimeStatus': 'DOWN',
         'uptimeStatusStartedAt': '2024-01-01T00:00:00Z',
         'url': '**REDACTED**',
       }),
       dict({
         '_type': 'push',
+        'clientSecret': '**REDACTED**',
         'createdAt': '2024-01-01T00:00:00Z',
         'effectiveIntegrations': list([
         ]),
@@ -231,7 +232,7 @@
             'value': '10 mail.example.com',
           }),
         ]),
-        'resolverHost': '1.1.1.1',
+        'resolverHost': '**REDACTED**',
         'resolverPort': 53,
         'statusPages': list([
         ]),

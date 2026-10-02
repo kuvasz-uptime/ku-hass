@@ -14,6 +14,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     BooleanSelector,
@@ -21,6 +22,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
@@ -38,6 +42,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
     STATS_PERIOD_OPTIONS,
 )
+from .entity import server_device_identifier
 from .monitor_types import supported_monitor_types
 
 if TYPE_CHECKING:
@@ -47,11 +52,14 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Masks the key in the form, including when reconfigure pre-fills the stored one.
+API_KEY_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
 STEP_USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME): str,
         vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_API_KEY): str,
+        vol.Optional(CONF_API_KEY): API_KEY_SELECTOR,
         vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
         vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
@@ -65,12 +73,12 @@ STEP_USER_SCHEMA = vol.Schema(
     }
 )
 
-STEP_REAUTH_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
+STEP_REAUTH_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): API_KEY_SELECTOR})
 
 STEP_RECONFIGURE_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_API_KEY): str,
+        vol.Optional(CONF_API_KEY): API_KEY_SELECTOR,
         vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
     }
 )
@@ -107,6 +115,29 @@ async def _async_validate_connection(
 
 def _monitor_key(monitor: dict[str, Any]) -> str:
     return f"{monitor['_type']}_{monitor['id']}"
+
+
+def _is_same_instance(
+    hass: HomeAssistant, entry: ConfigEntry, monitors: list[dict[str, Any]]
+) -> bool:
+    """
+    Guess whether `monitors` come from the instance the entry was set up with.
+
+    Kuvasz exposes no instance ID, and monitor IDs restart from 1 on every
+    instance, so a type+id match alone proves nothing. A monitor that also kept
+    its name does. Entries without monitor devices have nothing to compare.
+    """
+    names = {f"{entry.entry_id}_{_monitor_key(m)}": m["name"] for m in monitors}
+    server = server_device_identifier(entry.entry_id)[1]
+    known = [
+        (identifier, device.name)
+        for device in dr.async_entries_for_config_entry(
+            dr.async_get(hass), entry.entry_id
+        )
+        for domain, identifier in device.identifiers
+        if domain == DOMAIN and identifier != server
+    ]
+    return not known or any(names.get(key) == name for key, name in known)
 
 
 def _build_monitors_schema(
@@ -298,9 +329,15 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(host)
                 self._abort_if_unique_id_configured()
 
-            errors, _ = await _async_validate_connection(
+            errors, monitors = await _async_validate_connection(
                 self.hass, host, api_key, verify_ssl=verify_ssl
             )
+            if (
+                not errors
+                and host != entry.data[CONF_HOST]
+                and not _is_same_instance(self.hass, entry, monitors)
+            ):
+                return self.async_abort(reason="different_instance")
             if not errors:
                 return self.async_update_reload_and_abort(
                     entry,

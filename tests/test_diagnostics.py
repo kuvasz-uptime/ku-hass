@@ -25,6 +25,13 @@ async def test_secrets_and_logs_are_removed(hass, hass_client):
     http = next(m for m in diagnostics["monitors"] if m["_type"] == "http")
     assert http["url"] == "**REDACTED**"
     assert http["requestHeaders"] == "**REDACTED**"
+    down = next(m for m in diagnostics["monitors"] if m["name"] == "Down Service")
+    assert down["uptimeError"] == "**REDACTED**"
+    assert down["sslError"] == "**REDACTED**"
+    push = next(m for m in diagnostics["monitors"] if m["_type"] == "push")
+    assert push["clientSecret"] == "**REDACTED**"
+    dns = next(m for m in diagnostics["monitors"] if m["_type"] == "dns")
+    assert dns["resolverHost"] == "**REDACTED**"
     docker = next(m for m in diagnostics["monitors"] if m["_type"] == "docker")
     assert docker["dockerHost"] == "**REDACTED**"
     assert "latencyLogs" not in diagnostics["stats"]["http_1"]

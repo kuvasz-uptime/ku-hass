@@ -7,6 +7,8 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.selector import TextSelectorType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.kuvasz_uptime.api import KuvaszApiError
@@ -669,6 +671,14 @@ class TestReconfigureFlow:
         host_key = next(k for k in result["data_schema"].schema if str(k) == "host")
         assert host_key.description == {"suggested_value": "http://kuvasz.local:8080"}
 
+    async def test_prefilled_api_key_is_masked(self, hass):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        schema = result["data_schema"].schema
+        key = next(k for k in schema if str(k) == "api_key")
+        assert schema[key].config["type"] == TextSelectorType.PASSWORD
+
     async def test_updates_connection_details(self, hass, mock_setup_entry):
         entry = _make_existing_entry(hass)
         result = await entry.start_reconfigure_flow(hass)
@@ -726,6 +736,47 @@ class TestReconfigureFlow:
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"
         assert entry.data["host"] == "http://kuvasz.local:8080"
+
+    async def _reconfigure_with_device(self, hass, device_name, host):
+        """Reconfigure an entry whose http_1 device was last seen as `device_name`."""
+        entry = _make_existing_entry(hass)
+        dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, f"{entry.entry_id}_http_1")},
+            name=device_name,
+        )
+        result = await entry.start_reconfigure_flow(hass)
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"host": host, "verify_ssl": True}
+            )
+            await hass.async_block_till_done()
+        return entry, result
+
+    async def test_moved_instance_is_accepted(self, hass, mock_setup_entry):
+        entry, result = await self._reconfigure_with_device(
+            hass, HTTP_MONITOR_UP["name"], "http://10.0.0.7:8080"
+        )
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "http://10.0.0.7:8080"
+
+    async def test_different_instance_aborts(self, hass, mock_setup_entry):
+        entry, result = await self._reconfigure_with_device(
+            hass, "Another Instance's Monitor", "http://other.local:8080"
+        )
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "different_instance"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+        mock_setup_entry.assert_not_called()
+
+    async def test_same_host_skips_instance_check(self, hass, mock_setup_entry):
+        _, result = await self._reconfigure_with_device(
+            hass, "Another Instance's Monitor", "http://kuvasz.local:8080"
+        )
+
+        assert result["reason"] == "reconfigure_successful"
 
     async def test_connection_error_keeps_form_with_input(self, hass):
         entry = _make_existing_entry(hass)

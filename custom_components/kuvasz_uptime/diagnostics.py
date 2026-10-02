@@ -15,14 +15,19 @@ if TYPE_CHECKING:
     from .coordinator import KuvaszConfigEntry
 
 # Credentials, plus anything that can point at private infrastructure or carry
-# secrets of its own (URLs with tokens, auth headers, request bodies).
+# secrets of its own (URLs with tokens, auth headers, request bodies). Check
+# errors are raw exception messages, which can name the host that failed.
 TO_REDACT = {
     CONF_API_KEY,
     CONF_HOST,
+    "clientSecret",
     "dockerHost",
     "expectedHeaders",
     "requestBody",
     "requestHeaders",
+    "resolverHost",
+    "sslError",
+    "uptimeError",
     "url",
 }
 
