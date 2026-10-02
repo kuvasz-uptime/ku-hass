@@ -23,7 +23,7 @@ jobs:
       - name: Format
         run: python3 -m ruff format . --check
       - name: Run tests
-        run: pytest tests/ -q
+        run: pytest tests/ -q --cov
       - name: HACS validation
         uses: "hacs/action@main"
         with:

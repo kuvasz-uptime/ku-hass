@@ -306,3 +306,37 @@ class TestGetStats:
         mock_api.get(f"{BASE_URL}/api/v2/settings", json=SETTINGS_RESPONSE)
         async for client in _client(mock_api, f"{BASE_URL}/", api_key=API_KEY):
             assert await client.get_settings() == SETTINGS_RESPONSE
+
+
+class TestPatchMonitor:
+    URL = f"{BASE_URL}/api/v2/http-monitors/1"
+
+    async def test_sends_fields_as_json(self, client, mock_api):
+        mock_api.patch(self.URL, status=200)
+        await client.patch_monitor(MONITOR_TYPES_BY_KEY["http"], 1, {"enabled": False})
+
+        method, url, data, headers = mock_api.mock_calls[0]
+        assert method == "PATCH"
+        assert str(url) == self.URL
+        assert data == {"enabled": False}
+        assert headers["X-API-KEY"] == API_KEY
+
+    async def test_raises_auth_error_on_401(self, client, mock_api):
+        mock_api.patch(self.URL, status=401)
+        with pytest.raises(KuvaszAuthError):
+            await client.patch_monitor(MONITOR_TYPES_BY_KEY["http"], 1, {})
+
+    async def test_raises_api_error_on_400(self, client, mock_api):
+        mock_api.patch(self.URL, status=400)
+        with pytest.raises(KuvaszApiError, match="400"):
+            await client.patch_monitor(MONITOR_TYPES_BY_KEY["http"], 1, {})
+
+    async def test_raises_api_error_on_connection_failure(self, client, mock_api):
+        mock_api.patch(self.URL, exc=aiohttp.ClientConnectionError())
+        with pytest.raises(KuvaszApiError, match="Connection error"):
+            await client.patch_monitor(MONITOR_TYPES_BY_KEY["http"], 1, {})
+
+    async def test_raises_api_error_on_timeout(self, client, mock_api):
+        mock_api.patch(self.URL, exc=TimeoutError())
+        with pytest.raises(KuvaszApiError, match="timed out"):
+            await client.patch_monitor(MONITOR_TYPES_BY_KEY["http"], 1, {})
