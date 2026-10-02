@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, UnitOfInformation
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
@@ -16,6 +16,8 @@ from custom_components.kuvasz_uptime.coordinator import (
 from tests.conftest import (
     DNS_MONITOR_STATS,
     DNS_MONITOR_UP,
+    DOCKER_MONITOR_STATS,
+    DOCKER_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
     HTTP_MONITOR_STATS,
@@ -39,6 +41,8 @@ from tests.conftest import (
 #   TCP (metrics disabled):  uptime_pct (1)
 #   DNS (metrics on):        uptime_pct, avg_response (2)
 #   DNS (metrics disabled):  uptime_pct (1)
+#   Docker (metrics on):     uptime_pct, avg_cpu, avg_memory (3)
+#   Docker (metrics off):    uptime_pct (1)
 HTTP_SSL_SENSOR_COUNT = 3
 HTTP_NO_SSL_SENSOR_COUNT = 2
 PUSH_SENSOR_COUNT = 2
@@ -48,6 +52,8 @@ TCP_METRICS_SENSOR_COUNT = 2
 TCP_NO_METRICS_SENSOR_COUNT = 1
 DNS_METRICS_SENSOR_COUNT = 2
 DNS_NO_METRICS_SENSOR_COUNT = 1
+DOCKER_METRICS_SENSOR_COUNT = 3
+DOCKER_NO_METRICS_SENSOR_COUNT = 1
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
@@ -507,3 +513,124 @@ class TestDnsSensors:
 
         rt = next(e for e in entities if "average_latency_in_ms" in e.unique_id)
         assert rt.unique_id == "kuvasz_uptime_test_entry_dns_50_average_latency_in_ms"
+
+
+class TestDockerSensors:
+    async def test_docker_monitor_with_metrics_sensor_count(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == DOCKER_METRICS_SENSOR_COUNT
+
+    async def test_docker_monitor_without_metrics_sensor_count(self, hass):
+        monitor = {**DOCKER_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == DOCKER_NO_METRICS_SENSOR_COUNT
+
+    async def test_docker_uptime_percentage(self, hass):
+        stats = {"docker_60": DOCKER_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        pct = next(e for e in entities if "uptime_ratio" in e.unique_id)
+        assert pct.native_value == pytest.approx(99.97, abs=0.001)
+
+    async def test_docker_has_no_latency_sensor(self, hass):
+        """Docker stats carry no latencyStats, so no latency entity is exposed."""
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        rt_sensors = [e for e in entities if "average_latency_in_ms" in e.unique_id]
+        assert len(rt_sensors) == 0
+
+    async def test_docker_has_no_packet_loss_sensor(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        pkt_sensors = [e for e in entities if "average_packet_loss" in e.unique_id]
+        assert len(pkt_sensors) == 0
+
+    async def test_docker_avg_cpu_usage_sensor(self, hass):
+        stats = {"docker_60": DOCKER_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        cpu = next(e for e in entities if "average_cpu_usage" in e.unique_id)
+        assert cpu.native_value == 3.5
+        assert cpu.native_unit_of_measurement == PERCENTAGE
+        assert cpu.state_class == SensorStateClass.MEASUREMENT
+
+    async def test_docker_avg_memory_usage_sensor(self, hass):
+        stats = {"docker_60": DOCKER_MONITOR_STATS}
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        mem = next(e for e in entities if "average_memory_usage" in e.unique_id)
+        assert mem.native_value == 104857600
+        assert mem.device_class == SensorDeviceClass.DATA_SIZE
+        assert mem.state_class == SensorStateClass.MEASUREMENT
+
+    async def test_docker_memory_usage_units(self, hass):
+        """The API reports bytes; Home Assistant is asked to display MiB."""
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        mem = next(e for e in entities if "average_memory_usage" in e.unique_id)
+        assert mem.native_unit_of_measurement == UnitOfInformation.BYTES
+        assert mem.suggested_unit_of_measurement == UnitOfInformation.MEBIBYTES
+
+    async def test_docker_usage_sensors_not_created_when_metrics_disabled(self, hass):
+        monitor = {**DOCKER_MONITOR_UP, "metricsHistoryEnabled": False}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        usage_sensors = [
+            e
+            for e in entities
+            if "average_cpu_usage" in e.unique_id
+            or "average_memory_usage" in e.unique_id
+        ]
+        assert len(usage_sensors) == 0
+
+    async def test_docker_usage_sensors_none_when_no_stats(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP], stats_map={})
+        entities = await _setup_integration(hass, coordinator)
+
+        cpu = next(e for e in entities if "average_cpu_usage" in e.unique_id)
+        mem = next(e for e in entities if "average_memory_usage" in e.unique_id)
+        assert cpu.native_value is None
+        assert mem.native_value is None
+
+    async def test_docker_usage_sensors_none_when_stats_are_null(self, hass):
+        """cpuStats and memoryStats are nullable in the API."""
+        stats = {
+            "docker_60": {**DOCKER_MONITOR_STATS, "cpuStats": None, "memoryStats": None}
+        }
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP], stats_map=stats)
+        entities = await _setup_integration(hass, coordinator)
+
+        cpu = next(e for e in entities if "average_cpu_usage" in e.unique_id)
+        mem = next(e for e in entities if "average_memory_usage" in e.unique_id)
+        assert cpu.native_value is None
+        assert mem.native_value is None
+
+    async def test_docker_has_no_timestamp_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ts_entities = [
+            e for e in entities if e.device_class == SensorDeviceClass.TIMESTAMP
+        ]
+        assert len(ts_entities) == 0
+
+    async def test_docker_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        cpu = next(e for e in entities if "average_cpu_usage" in e.unique_id)
+        assert cpu.unique_id == "kuvasz_uptime_test_entry_docker_60_average_cpu_usage"
+
+        mem = next(e for e in entities if "average_memory_usage" in e.unique_id)
+        assert (
+            mem.unique_id == "kuvasz_uptime_test_entry_docker_60_average_memory_usage"
+        )

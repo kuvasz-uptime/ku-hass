@@ -9,6 +9,8 @@ from custom_components.kuvasz_uptime.coordinator import (
 from tests.conftest import (
     DNS_MONITOR_STATS,
     DNS_MONITOR_UP,
+    DOCKER_MONITOR_STATS,
+    DOCKER_MONITOR_UP,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_UP,
     ICMP_MONITOR_STATS,
@@ -17,6 +19,7 @@ from tests.conftest import (
     PUSH_MONITOR_UP,
     SETTINGS_RESPONSE,
     SETTINGS_RESPONSE_NO_DNS,
+    SETTINGS_RESPONSE_NO_DOCKER,
     SETTINGS_RESPONSE_NO_ICMP,
     SETTINGS_RESPONSE_NO_TCP,
     TCP_MONITOR_STATS,
@@ -29,6 +32,7 @@ DEFAULT_STATS = {
     "icmp": ICMP_MONITOR_STATS,
     "tcp": TCP_MONITOR_STATS,
     "dns": DNS_MONITOR_STATS,
+    "docker": DOCKER_MONITOR_STATS,
 }
 
 
@@ -249,7 +253,14 @@ class TestIcmpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
+        assert _requested_type_keys(client) == {
+            "http",
+            "push",
+            "icmp",
+            "tcp",
+            "dns",
+            "docker",
+        }
 
 
 class TestTcpCoordinator:
@@ -332,7 +343,14 @@ class TestTcpCoordinator:
 
         await coordinator.async_refresh()
 
-        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
+        assert _requested_type_keys(client) == {
+            "http",
+            "push",
+            "icmp",
+            "tcp",
+            "dns",
+            "docker",
+        }
         assert "tcp_40" in coordinator.data.stats
 
 
@@ -416,5 +434,97 @@ class TestDnsCoordinator:
 
         await coordinator.async_refresh()
 
-        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
+        assert _requested_type_keys(client) == {
+            "http",
+            "push",
+            "icmp",
+            "tcp",
+            "dns",
+            "docker",
+        }
         assert "dns_50" in coordinator.data.stats
+
+
+class TestDockerCoordinator:
+    async def test_docker_stats_fetched(self, hass):
+        client = _make_client(
+            monitors=[DOCKER_MONITOR_UP], stats={"docker": DOCKER_MONITOR_STATS}
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        stats = coordinator.data.monitor_stats("docker", 60)
+        assert stats["uptimeHistory"]["uptimeRatio"] == 0.9997
+        assert stats["cpuStats"]["averageCpuUsagePercentage"] == 3.5
+        assert stats["memoryStats"]["averageMemoryUsageBytes"] == 104857600
+
+    async def test_docker_read_only_flag_from_settings(self, hass):
+        from tests.conftest import SETTINGS_RESPONSE_READ_ONLY
+
+        client = _make_client(
+            monitors=[DOCKER_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "docker" in coordinator.data.read_only_types
+
+    async def test_docker_not_read_only_by_default(self, hass):
+        client = _make_client(monitors=[DOCKER_MONITOR_UP])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "docker" not in coordinator.data.read_only_types
+
+    async def test_is_read_only_docker(self, hass):
+        client = _make_client(monitors=[])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        await coordinator.async_refresh()
+        coordinator.data.read_only_types = frozenset({"docker"})
+
+        assert coordinator.data.is_read_only("docker") is True
+
+    async def test_docker_skipped_when_not_in_settings(self, hass):
+        """A Kuvasz predating Docker monitors is never asked for /docker-monitors.
+
+        This is the backward-compatibility guarantee: the endpoint 404s on
+        those instances, so probing it would fail every refresh.
+        """
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, DNS_MONITOR_UP],
+            settings=SETTINGS_RESPONSE_NO_DOCKER,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is True
+        assert _requested_type_keys(client) == {"http", "push", "icmp", "tcp", "dns"}
+        assert "docker" not in coordinator.data.read_only_types
+
+    async def test_docker_fetch_failure_fails_the_update(self, hass):
+        """A supported type that errors is a real failure, not absent support."""
+        client = _make_client(
+            monitors_error=KuvaszApiError("Failed to fetch docker monitors: 503"),
+            settings=SETTINGS_RESPONSE,
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.last_update_success is False
+
+    async def test_docker_fetched_when_in_settings(self, hass):
+        """Instances with areDockerMonitorsReadOnly should fetch Docker monitors."""
+        client = _make_client(
+            monitors=[HTTP_MONITOR_UP, DOCKER_MONITOR_UP], settings=SETTINGS_RESPONSE
+        )
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert "docker" in _requested_type_keys(client)
+        assert "docker_60" in coordinator.data.stats

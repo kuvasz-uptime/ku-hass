@@ -11,6 +11,7 @@ from custom_components.kuvasz_uptime.coordinator import (
 from custom_components.kuvasz_uptime.monitor_types import MONITOR_TYPES_BY_KEY
 from tests.conftest import (
     DNS_MONITOR_UP,
+    DOCKER_MONITOR_UP,
     HTTP_MONITOR_UP,
     ICMP_MONITOR_UP,
     PUSH_MONITOR_UP,
@@ -270,3 +271,43 @@ class TestDnsSwitch:
         coordinator = _make_coordinator(hass, [DNS_MONITOR_UP])
         entities = await _setup_integration(hass, coordinator)
         assert entities[0].unique_id == "kuvasz_uptime_test_entry_dns_50_enabled_switch"
+
+
+class TestDockerSwitch:
+    async def test_turn_on_patches_docker_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [{**DOCKER_MONITOR_UP, "enabled": False}])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_on()
+
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["docker"], 60, {"enabled": True}
+        )
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_turn_off_patches_docker_monitor(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        coordinator.async_request_refresh = AsyncMock()
+        entities = await _setup_integration(hass, coordinator)
+
+        await entities[0].async_turn_off()
+
+        coordinator.client.patch_monitor.assert_awaited_once_with(
+            MONITOR_TYPES_BY_KEY["docker"], 60, {"enabled": False}
+        )
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_no_switch_when_docker_read_only(self, hass):
+        coordinator = _make_coordinator(
+            hass, [DOCKER_MONITOR_UP], read_only_types={"docker"}
+        )
+        entities = await _setup_integration(hass, coordinator)
+        assert len(entities) == 0
+
+    async def test_docker_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert (
+            entities[0].unique_id == "kuvasz_uptime_test_entry_docker_60_enabled_switch"
+        )

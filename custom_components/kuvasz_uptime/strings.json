@@ -68,6 +68,12 @@
       "average_packet_loss": {
         "name": "Average Packet Loss"
       },
+      "average_cpu_usage": {
+        "name": "Average CPU Usage"
+      },
+      "average_memory_usage": {
+        "name": "Average Memory Usage"
+      },
       "ssl_valid_until": {
         "name": "SSL Valid Until"
       },

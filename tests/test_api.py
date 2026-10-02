@@ -18,6 +18,8 @@ from custom_components.kuvasz_uptime.monitor_types import (
 from tests.conftest import (
     DNS_MONITOR_STATS,
     DNS_MONITOR_UP,
+    DOCKER_MONITOR_STATS,
+    DOCKER_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_STATS,
     HTTP_MONITOR_UP,
@@ -122,17 +124,25 @@ class TestGetMonitors:
         assert result[0]["name"] == "My Domain"
         assert result[0]["host"] == "example.com"
 
+    async def test_get_docker_monitors(self, client, mock_api):
+        mock_api.get(f"{BASE_URL}/api/v2/docker-monitors", json=[DOCKER_MONITOR_UP])
+        result = await client.get_monitors(MONITOR_TYPES_BY_KEY["docker"])
+        assert len(result) == 1
+        assert result[0]["name"] == "My Container"
+        assert result[0]["container"] == "postgres"
+
     async def test_get_all_monitors_tags_type(self, client, mock_api):
         mock_api.get(f"{BASE_URL}/api/v2/http-monitors", json=[HTTP_MONITOR_UP])
         mock_api.get(f"{BASE_URL}/api/v2/push-monitors", json=[PUSH_MONITOR_UP])
         mock_api.get(f"{BASE_URL}/api/v2/icmp-monitors", json=[ICMP_MONITOR_UP])
         mock_api.get(f"{BASE_URL}/api/v2/tcp-monitors", json=[TCP_MONITOR_UP])
         mock_api.get(f"{BASE_URL}/api/v2/dns-monitors", json=[DNS_MONITOR_UP])
+        mock_api.get(f"{BASE_URL}/api/v2/docker-monitors", json=[DOCKER_MONITOR_UP])
         result = await client.get_all_monitors(MONITOR_TYPES)
 
         types = {m["_type"] for m in result}
-        assert types == {"http", "push", "icmp", "tcp", "dns"}
-        assert len(result) == 5
+        assert types == {"http", "push", "icmp", "tcp", "dns", "docker"}
+        assert len(result) == 6
 
     async def test_get_all_monitors_raises_if_any_request_fails(self, client, mock_api):
         mock_api.get(f"{BASE_URL}/api/v2/http-monitors", status=500)
@@ -140,15 +150,16 @@ class TestGetMonitors:
         mock_api.get(f"{BASE_URL}/api/v2/icmp-monitors", json=[])
         mock_api.get(f"{BASE_URL}/api/v2/tcp-monitors", json=[])
         mock_api.get(f"{BASE_URL}/api/v2/dns-monitors", json=[])
+        mock_api.get(f"{BASE_URL}/api/v2/docker-monitors", json=[])
         with pytest.raises(KuvaszApiError):
             await client.get_all_monitors(MONITOR_TYPES)
 
-    @pytest.mark.parametrize("failing", ["icmp", "tcp", "dns"])
+    @pytest.mark.parametrize("failing", ["icmp", "tcp", "dns", "docker"])
     async def test_get_all_monitors_raises_when_requested_type_fails(
         self, client, mock_api, failing
     ):
         """A type the caller asked for is supported, so its errors are real."""
-        for key in ("http", "push", "icmp", "tcp", "dns"):
+        for key in ("http", "push", "icmp", "tcp", "dns", "docker"):
             path = f"{BASE_URL}{MONITOR_TYPES_BY_KEY[key].api_path}"
             if key == failing:
                 mock_api.get(path, status=503)
@@ -171,7 +182,12 @@ class TestGetMonitors:
         assert not any(
             probe in url
             for url in called
-            for probe in ("icmp-monitors", "tcp-monitors", "dns-monitors")
+            for probe in (
+                "icmp-monitors",
+                "tcp-monitors",
+                "dns-monitors",
+                "docker-monitors",
+            )
         )
 
     async def test_get_all_monitors_empty_types(self, client, mock_api):
@@ -188,7 +204,7 @@ class TestGetMonitors:
         await client_no_key.get_monitors(MONITOR_TYPES_BY_KEY["http"])
         assert "X-API-KEY" not in mock_api.mock_calls[0][3]
 
-    @pytest.mark.parametrize("key", ["http", "push", "icmp", "tcp", "dns"])
+    @pytest.mark.parametrize("key", ["http", "push", "icmp", "tcp", "dns", "docker"])
     async def test_get_monitors_raises_if_request_fails(self, client, mock_api, key):
         spec = MONITOR_TYPES_BY_KEY[key]
         mock_api.get(f"{BASE_URL}{spec.api_path}", status=500)
@@ -249,6 +265,18 @@ class TestGetStats:
         result = await client.get_monitor_stats(MONITOR_TYPES_BY_KEY["dns"], 50, "P1D")
         assert result["uptimeHistory"]["uptimeRatio"] == 0.9998
         assert result["latencyStats"]["averageLatencyInMs"] == 12
+
+    async def test_get_docker_monitor_stats(self, client, mock_api):
+        mock_api.get(
+            f"{BASE_URL}/api/v2/docker-monitors/60/stats?period=P1D",
+            json=DOCKER_MONITOR_STATS,
+        )
+        result = await client.get_monitor_stats(
+            MONITOR_TYPES_BY_KEY["docker"], 60, "P1D"
+        )
+        assert result["uptimeHistory"]["uptimeRatio"] == 0.9997
+        assert result["cpuStats"]["averageCpuUsagePercentage"] == 3.5
+        assert result["memoryStats"]["averageMemoryUsageBytes"] == 104857600
 
     async def test_trailing_slash_stripped_from_host(self, mock_api):
         mock_api.get(f"{BASE_URL}/api/v2/settings", json=SETTINGS_RESPONSE)

@@ -12,6 +12,7 @@ from homeassistant.components.binary_sensor import (
 from .const import (
     DOMAIN,
     MONITOR_TYPE_DNS,
+    MONITOR_TYPE_DOCKER,
     MONITOR_TYPE_HTTP,
     MONITOR_TYPE_ICMP,
     MONITOR_TYPE_PUSH,
@@ -162,6 +163,18 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
                     "uptime_check_interval": data.get("uptimeCheckInterval"),
                     "timeout_ms": data.get("timeoutMs"),
                     "latency_threshold_ms": data.get("latencyThresholdMs"),
+                    "metrics_history_enabled": data.get("metricsHistoryEnabled"),
+                }
+            )
+        elif self._monitor_type == MONITOR_TYPE_DOCKER:
+            attrs.update(
+                {
+                    "docker_host": data.get("dockerHost"),
+                    "container": data.get("container"),
+                    "image": data.get("image"),
+                    "next_uptime_check": data.get("nextUptimeCheck"),
+                    "uptime_check_interval": data.get("uptimeCheckInterval"),
+                    "timeout_ms": data.get("timeoutMs"),
                     "metrics_history_enabled": data.get("metricsHistoryEnabled"),
                 }
             )

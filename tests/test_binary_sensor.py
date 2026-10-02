@@ -13,6 +13,8 @@ from custom_components.kuvasz_uptime.coordinator import (
 from tests.conftest import (
     DNS_MONITOR_DOWN,
     DNS_MONITOR_UP,
+    DOCKER_MONITOR_DOWN,
+    DOCKER_MONITOR_UP,
     HTTP_MONITOR_DOWN,
     HTTP_MONITOR_NO_SSL,
     HTTP_MONITOR_UP,
@@ -542,3 +544,67 @@ class TestDnsBinarySensor:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         assert uptime.unique_id == "kuvasz_uptime_test_entry_dns_50_uptime_status"
+
+
+class TestDockerBinarySensor:
+    async def test_docker_monitor_up_is_on(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is True
+
+    async def test_docker_monitor_down_is_off(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.is_on is False
+
+    async def test_docker_monitor_creates_uptime_and_enabled_sensors(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        assert len(entities) == 2
+
+    async def test_docker_monitor_has_no_ssl_sensor(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        ssl_entities = [e for e in entities if "ssl" in e.unique_id]
+        assert len(ssl_entities) == 0
+
+    async def test_docker_uptime_attributes(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        attrs = uptime.extra_state_attributes
+        assert attrs["docker_host"] == "local"
+        assert attrs["container"] == "postgres"
+        assert attrs["image"] == "postgres:17"
+        assert attrs["next_uptime_check"] == "2024-01-01T01:01:00Z"
+        assert attrs["uptime_check_interval"] == 60
+        assert attrs["timeout_ms"] == 5000
+        assert attrs["metrics_history_enabled"] is True
+        assert attrs["failure_count_threshold"] == 1
+        assert "url" not in attrs
+        assert "host" not in attrs
+        assert "latency_threshold_ms" not in attrs
+
+    async def test_docker_image_may_be_absent(self, hass):
+        """image is null when the container could not be inspected."""
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_DOWN])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        attrs = uptime.extra_state_attributes
+        assert attrs["image"] is None
+        assert attrs["uptime_error"] == "No such container: postgres"
+
+    async def test_docker_unique_id_format(self, hass):
+        coordinator = _make_coordinator(hass, [DOCKER_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
+        assert uptime.unique_id == "kuvasz_uptime_test_entry_docker_60_uptime_status"

@@ -324,6 +324,67 @@ DNS_MONITOR_STATS = {
     "metricsLogs": [],
 }
 
+DOCKER_MONITOR_UP = {
+    "id": 60,
+    "name": "My Container",
+    "dockerHost": "local",
+    "container": "postgres",
+    "image": "postgres:17",
+    "uptimeCheckInterval": 60,
+    "timeoutMs": 5000,
+    "failureCountThreshold": 1,
+    "metricsHistoryEnabled": True,
+    "enabled": True,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-02T00:00:00Z",
+    "uptimeStatus": "UP",
+    "uptimeStatusStartedAt": "2024-01-01T00:00:00Z",
+    "lastUptimeCheck": "2024-01-01T01:00:00Z",
+    "nextUptimeCheck": "2024-01-01T01:01:00Z",
+    "uptimeError": None,
+    "integrations": [],
+    "effectiveIntegrations": [],
+    "statusPages": [],
+    "maintenanceWindows": [],
+    "inMaintenance": False,
+    "category": None,
+    "ignoreConnectivityCheck": False,
+    "_type": "docker",
+}
+
+# Also covers the nullable image: the container could not be inspected.
+DOCKER_MONITOR_DOWN = {
+    **DOCKER_MONITOR_UP,
+    "id": 61,
+    "name": "Down Container",
+    "image": None,
+    "uptimeStatus": "DOWN",
+    "uptimeError": "No such container: postgres",
+}
+
+DOCKER_MONITOR_STATS = {
+    "id": 60,
+    "metricsHistoryEnabled": True,
+    "uptimeHistory": {
+        "period": "PT24H",
+        "incidents": 0,
+        "affectedMonitors": 0,
+        "uptimeRatio": 0.9997,
+        "totalDowntimeSeconds": 8,
+    },
+    "cpuStats": {
+        "averageCpuUsagePercentage": 3.5,
+        "minCpuUsagePercentage": 0.2,
+        "maxCpuUsagePercentage": 12.8,
+    },
+    "memoryStats": {
+        "averageMemoryUsageBytes": 104857600,
+        "minMemoryUsageBytes": 52428800,
+        "maxMemoryUsageBytes": 209715200,
+    },
+    "metricsLogs": [],
+}
+
 SETTINGS_RESPONSE = {
     "versionInfo": {
         "installedVersion": "2.1.0",
@@ -339,6 +400,7 @@ SETTINGS_RESPONSE = {
             "areIcmpMonitorsReadOnly": False,
             "areTcpMonitorsReadOnly": False,
             "areDnsMonitorsReadOnly": False,
+            "areDockerMonitorsReadOnly": False,
         },
         "updateChecksEnabled": True,
     },
@@ -354,11 +416,12 @@ SETTINGS_RESPONSE_READ_ONLY = {
             "areIcmpMonitorsReadOnly": True,
             "areTcpMonitorsReadOnly": True,
             "areDnsMonitorsReadOnly": True,
+            "areDockerMonitorsReadOnly": True,
         }
     },
 }
 
-# An instance predating ICMP, TCP and DNS monitors.
+# An instance predating ICMP, TCP, DNS and Docker monitors.
 SETTINGS_RESPONSE_NO_ICMP = {
     "app": {
         "editabilityState": {
@@ -369,7 +432,7 @@ SETTINGS_RESPONSE_NO_ICMP = {
     },
 }
 
-# An instance that knows about ICMP monitors, but predates TCP and DNS ones.
+# An instance that knows about ICMP monitors, but predates TCP, DNS and Docker ones.
 SETTINGS_RESPONSE_NO_TCP = {
     "app": {
         "editabilityState": {
@@ -381,7 +444,8 @@ SETTINGS_RESPONSE_NO_TCP = {
     },
 }
 
-# An instance that knows about ICMP and TCP monitors, but predates DNS ones.
+# An instance that knows about ICMP and TCP monitors, but predates DNS and Docker
+# ones.
 SETTINGS_RESPONSE_NO_DNS = {
     "app": {
         "editabilityState": {
@@ -390,6 +454,20 @@ SETTINGS_RESPONSE_NO_DNS = {
             "arePushMonitorsReadOnly": False,
             "areIcmpMonitorsReadOnly": False,
             "areTcpMonitorsReadOnly": False,
+        }
+    },
+}
+
+# An instance that knows about ICMP, TCP and DNS monitors, but predates Docker ones.
+SETTINGS_RESPONSE_NO_DOCKER = {
+    "app": {
+        "editabilityState": {
+            "areHttpMonitorsReadOnly": False,
+            "areStatusPagesReadOnly": False,
+            "arePushMonitorsReadOnly": False,
+            "areIcmpMonitorsReadOnly": False,
+            "areTcpMonitorsReadOnly": False,
+            "areDnsMonitorsReadOnly": False,
         }
     },
 }
