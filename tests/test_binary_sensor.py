@@ -23,13 +23,14 @@ from tests.conftest import (
     PUSH_MONITOR_UP,
     TCP_MONITOR_DOWN,
     TCP_MONITOR_UP,
+    make_config_entry,
 )
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
     client = MagicMock(spec=KuvaszClient)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval=30, entry_id="test_entry"
+        hass, make_config_entry(hass), client, scan_interval=30
     )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
@@ -39,14 +40,8 @@ def _make_coordinator(hass, monitors, stats_map=None):
 
 
 async def _setup_integration(hass, coordinator):
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = coordinator
-
-    from homeassistant.config_entries import ConfigEntry
-
-    entry = MagicMock(spec=ConfigEntry)
-    entry.entry_id = "test_entry"
-    entry.domain = DOMAIN
+    entry = coordinator.config_entry
+    entry.runtime_data = coordinator
 
     from custom_components.kuvasz_uptime.binary_sensor import async_setup_entry
 

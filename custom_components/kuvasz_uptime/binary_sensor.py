@@ -10,7 +10,6 @@ from homeassistant.components.binary_sensor import (
 )
 
 from .const import (
-    DOMAIN,
     MONITOR_TYPE_DNS,
     MONITOR_TYPE_DOCKER,
     MONITOR_TYPE_HTTP,
@@ -23,11 +22,12 @@ from .const import (
 from .entity import KuvaszMonitorEntity
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import KuvaszCoordinator
+    from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
+
+PARALLEL_UPDATES = 0
 
 
 def _format_record_matchers(matchers: list[dict[str, Any]] | None) -> list[str]:
@@ -43,12 +43,12 @@ def _format_record_matchers(matchers: list[dict[str, Any]] | None) -> list[str]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    _hass: HomeAssistant,
+    entry: KuvaszConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Kuvasz binary sensors for a config entry."""
-    coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[BinarySensorEntity] = []
 
     for monitor in coordinator.data.monitors:

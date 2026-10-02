@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import CONF_HOST, Platform
+from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -21,10 +22,10 @@ from .const import (
     DEFAULT_VERIFY_SSL,
     DOMAIN,
 )
-from .coordinator import KuvaszCoordinator
+from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
+from .entity import server_device_info
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,12 +33,12 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH, Platform.UPDATE]
 
 
-def _entry_value(entry: ConfigEntry, key: str, default: Any | None = None) -> Any:
+def _entry_value(entry: KuvaszConfigEntry, key: str, default: Any | None = None) -> Any:
     """Read a value from entry.options first, then entry.data, then default."""
     return entry.options.get(key, entry.data.get(key, default))
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bool:
     """Set up Kuvasz Uptime from a config entry."""
     verify_ssl = entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
     session = async_get_clientsession(hass, verify_ssl=verify_ssl)
@@ -51,25 +52,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     stats_period = _entry_value(entry, CONF_STATS_PERIOD, DEFAULT_STATS_PERIOD)
     coordinator = KuvaszCoordinator(
         hass,
+        entry,
         client,
         scan_interval=scan_interval,
         selected_monitors=selected_monitors,
         stats_period=stats_period,
-        entry_id=entry.entry_id,
     )
     await coordinator.async_config_entry_first_refresh()
 
     _remove_stale_devices(hass, entry, coordinator.data.monitors)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Monitor devices point at the server device via via_device, so it has to
+    # exist before the platforms add their entities.
+    @callback
+    def _async_update_server_device() -> None:
+        dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id, **server_device_info(coordinator)
+        )
 
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    _async_update_server_device()
+    entry.async_on_unload(coordinator.async_add_listener(_async_update_server_device))
+
+    entry.runtime_data = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 def _remove_stale_devices(
-    hass: HomeAssistant, entry: ConfigEntry, active_monitors: list
+    hass: HomeAssistant, entry: KuvaszConfigEntry, active_monitors: list
 ) -> None:
     """
     Remove devices (and their entities) for monitors no longer in the active set.
@@ -95,13 +105,6 @@ def _remove_stale_devices(
             dev_reg.async_remove_device(device_entry.id)
 
 
-async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: KuvaszConfigEntry) -> bool:
     """Unload a Kuvasz Uptime config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

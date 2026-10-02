@@ -33,6 +33,7 @@ from tests.conftest import (
     SETTINGS_RESPONSE_NO_TCP,
     TCP_MONITOR_STATS,
     TCP_MONITOR_UP,
+    make_config_entry,
 )
 
 DEFAULT_STATS = {
@@ -75,7 +76,9 @@ class TestCoordinatorFetch:
     async def test_returns_all_monitors(self, hass):
         monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP, ICMP_MONITOR_UP]
         client = _make_client(monitors=monitors)
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -84,7 +87,9 @@ class TestCoordinatorFetch:
     async def test_stats_keyed_by_type_and_id(self, hass):
         monitors = [HTTP_MONITOR_UP, PUSH_MONITOR_UP, ICMP_MONITOR_UP]
         client = _make_client(monitors=monitors)
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -96,7 +101,9 @@ class TestCoordinatorFetch:
         client = _make_client(
             monitors=[HTTP_MONITOR_UP], stats={"http": HTTP_MONITOR_STATS}
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -105,7 +112,9 @@ class TestCoordinatorFetch:
 
     async def test_raises_update_failed_on_api_error(self, hass):
         client = _make_client(monitors_error=KuvaszApiError("network down"))
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -119,7 +128,9 @@ class TestCoordinatorFetch:
     async def test_raises_auth_failed_on_auth_error(self, hass):
         client = _make_client()
         client.get_settings = AsyncMock(side_effect=KuvaszAuthError("bad key"))
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -133,7 +144,9 @@ class TestCoordinatorFetch:
             monitors=[HTTP_MONITOR_UP],
             stats_error=KuvaszApiError("stats unavailable"),
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -155,7 +168,9 @@ class TestCoordinatorFetch:
             return HTTP_MONITOR_STATS
 
         client.get_monitor_stats = AsyncMock(side_effect=_stats)
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -166,7 +181,9 @@ class TestCoordinatorFetch:
 
     async def test_empty_monitor_list(self, hass):
         client = _make_client(monitors=[])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -175,7 +192,9 @@ class TestCoordinatorFetch:
 
     async def test_monitor_stats_returns_empty_dict_for_unknown_key(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -185,7 +204,9 @@ class TestCoordinatorFetch:
         """Monitors of different types may share an ID without colliding."""
         push_with_same_id = {**PUSH_MONITOR_UP, "id": 1}
         client = _make_client(monitors=[HTTP_MONITOR_UP, push_with_same_id])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -198,7 +219,11 @@ class TestCoordinatorMonitorFiltering:
     async def test_selected_monitors_filters_results(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP])
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, selected_monitors=["http_1"]
+            hass,
+            make_config_entry(hass),
+            client,
+            scan_interval=30,
+            selected_monitors=["http_1"],
         )
 
         await coordinator.async_refresh()
@@ -209,7 +234,11 @@ class TestCoordinatorMonitorFiltering:
     async def test_none_selected_monitors_shows_all(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP])
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, selected_monitors=None
+            hass,
+            make_config_entry(hass),
+            client,
+            scan_interval=30,
+            selected_monitors=None,
         )
 
         await coordinator.async_refresh()
@@ -219,7 +248,11 @@ class TestCoordinatorMonitorFiltering:
     async def test_empty_selected_monitors_shows_nothing(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP])
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, selected_monitors=[]
+            hass,
+            make_config_entry(hass),
+            client,
+            scan_interval=30,
+            selected_monitors=[],
         )
 
         await coordinator.async_refresh()
@@ -229,7 +262,11 @@ class TestCoordinatorMonitorFiltering:
     async def test_unknown_monitor_key_is_ignored(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP])
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, selected_monitors=["http_1", "http_999"]
+            hass,
+            make_config_entry(hass),
+            client,
+            scan_interval=30,
+            selected_monitors=["http_1", "http_999"],
         )
 
         await coordinator.async_refresh()
@@ -240,7 +277,11 @@ class TestCoordinatorMonitorFiltering:
     async def test_only_selected_monitors_get_stats_fetched(self, hass):
         client = _make_client(monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP])
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, selected_monitors=["http_1"]
+            hass,
+            make_config_entry(hass),
+            client,
+            scan_interval=30,
+            selected_monitors=["http_1"],
         )
 
         await coordinator.async_refresh()
@@ -254,7 +295,9 @@ class TestIcmpCoordinator:
         client = _make_client(
             monitors=[ICMP_MONITOR_UP], stats={"icmp": ICMP_MONITOR_STATS}
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -269,7 +312,9 @@ class TestIcmpCoordinator:
         client = _make_client(
             monitors=[ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -277,7 +322,9 @@ class TestIcmpCoordinator:
 
     async def test_icmp_not_read_only_by_default(self, hass):
         client = _make_client(monitors=[ICMP_MONITOR_UP])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -285,7 +332,9 @@ class TestIcmpCoordinator:
 
     async def test_is_read_only_icmp(self, hass):
         client = _make_client(monitors=[])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
         await coordinator.async_refresh()
         coordinator.data.read_only_types = frozenset({"icmp"})
 
@@ -297,7 +346,9 @@ class TestIcmpCoordinator:
             monitors=[HTTP_MONITOR_UP, PUSH_MONITOR_UP],
             settings=SETTINGS_RESPONSE_NO_ICMP,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -310,7 +361,9 @@ class TestIcmpCoordinator:
         client = _make_client(
             monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP], settings=SETTINGS_RESPONSE
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -329,7 +382,9 @@ class TestTcpCoordinator:
         client = _make_client(
             monitors=[TCP_MONITOR_UP], stats={"tcp": TCP_MONITOR_STATS}
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -343,7 +398,9 @@ class TestTcpCoordinator:
         client = _make_client(
             monitors=[TCP_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -351,7 +408,9 @@ class TestTcpCoordinator:
 
     async def test_tcp_not_read_only_by_default(self, hass):
         client = _make_client(monitors=[TCP_MONITOR_UP])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -359,7 +418,9 @@ class TestTcpCoordinator:
 
     async def test_is_read_only_tcp(self, hass):
         client = _make_client(monitors=[])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
         await coordinator.async_refresh()
         coordinator.data.read_only_types = frozenset({"tcp"})
 
@@ -371,7 +432,9 @@ class TestTcpCoordinator:
             monitors=[HTTP_MONITOR_UP, ICMP_MONITOR_UP],
             settings=SETTINGS_RESPONSE_NO_TCP,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -389,7 +452,9 @@ class TestTcpCoordinator:
             monitors_error=KuvaszApiError("Failed to fetch tcp monitors: 503"),
             settings=SETTINGS_RESPONSE,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -400,7 +465,9 @@ class TestTcpCoordinator:
         client = _make_client(
             monitors=[HTTP_MONITOR_UP, TCP_MONITOR_UP], settings=SETTINGS_RESPONSE
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -420,7 +487,9 @@ class TestDnsCoordinator:
         client = _make_client(
             monitors=[DNS_MONITOR_UP], stats={"dns": DNS_MONITOR_STATS}
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -434,7 +503,9 @@ class TestDnsCoordinator:
         client = _make_client(
             monitors=[DNS_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -442,7 +513,9 @@ class TestDnsCoordinator:
 
     async def test_dns_not_read_only_by_default(self, hass):
         client = _make_client(monitors=[DNS_MONITOR_UP])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -450,7 +523,9 @@ class TestDnsCoordinator:
 
     async def test_is_read_only_dns(self, hass):
         client = _make_client(monitors=[])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
         await coordinator.async_refresh()
         coordinator.data.read_only_types = frozenset({"dns"})
 
@@ -466,7 +541,9 @@ class TestDnsCoordinator:
             monitors=[HTTP_MONITOR_UP, TCP_MONITOR_UP],
             settings=SETTINGS_RESPONSE_NO_DNS,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -480,7 +557,9 @@ class TestDnsCoordinator:
             monitors_error=KuvaszApiError("Failed to fetch dns monitors: 503"),
             settings=SETTINGS_RESPONSE,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -491,7 +570,9 @@ class TestDnsCoordinator:
         client = _make_client(
             monitors=[HTTP_MONITOR_UP, DNS_MONITOR_UP], settings=SETTINGS_RESPONSE
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -511,7 +592,9 @@ class TestDockerCoordinator:
         client = _make_client(
             monitors=[DOCKER_MONITOR_UP], stats={"docker": DOCKER_MONITOR_STATS}
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -526,7 +609,9 @@ class TestDockerCoordinator:
         client = _make_client(
             monitors=[DOCKER_MONITOR_UP], settings=SETTINGS_RESPONSE_READ_ONLY
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -534,7 +619,9 @@ class TestDockerCoordinator:
 
     async def test_docker_not_read_only_by_default(self, hass):
         client = _make_client(monitors=[DOCKER_MONITOR_UP])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -542,7 +629,9 @@ class TestDockerCoordinator:
 
     async def test_is_read_only_docker(self, hass):
         client = _make_client(monitors=[])
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
         await coordinator.async_refresh()
         coordinator.data.read_only_types = frozenset({"docker"})
 
@@ -558,7 +647,9 @@ class TestDockerCoordinator:
             monitors=[HTTP_MONITOR_UP, DNS_MONITOR_UP],
             settings=SETTINGS_RESPONSE_NO_DOCKER,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -572,7 +663,9 @@ class TestDockerCoordinator:
             monitors_error=KuvaszApiError("Failed to fetch docker monitors: 503"),
             settings=SETTINGS_RESPONSE,
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 
@@ -583,7 +676,9 @@ class TestDockerCoordinator:
         client = _make_client(
             monitors=[HTTP_MONITOR_UP, DOCKER_MONITOR_UP], settings=SETTINGS_RESPONSE
         )
-        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+        coordinator = KuvaszCoordinator(
+            hass, make_config_entry(hass), client, scan_interval=30
+        )
 
         await coordinator.async_refresh()
 

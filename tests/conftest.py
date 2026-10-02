@@ -477,6 +477,18 @@ SETTINGS_RESPONSE_NO_DOCKER = {
     },
 }
 
+
+def make_config_entry(hass, entry_id="test_entry"):
+    """Return a config entry for building a coordinator directly in tests."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id=entry_id,
+        data={"name": "Test Instance", "host": "http://kuvasz.local:8080"},
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
 # ---------------------------------------------------------------------------
 # Full integration setup
 # ---------------------------------------------------------------------------
@@ -502,7 +514,7 @@ STATS = {
 }
 
 
-async def setup_full_integration(hass, platforms):
+async def setup_full_integration(hass, platforms, settings=SETTINGS_RESPONSE):
     """Set up a config entry with every monitor type, loading only `platforms`."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -527,7 +539,7 @@ async def setup_full_integration(hass, platforms):
         patch("custom_components.kuvasz_uptime.KuvaszClient") as mock_client,
     ):
         instance = mock_client.return_value
-        instance.get_settings = AsyncMock(return_value=SETTINGS_RESPONSE)
+        instance.get_settings = AsyncMock(return_value=settings)
         instance.get_all_monitors = AsyncMock(return_value=[dict(m) for m in MONITORS])
         instance.get_monitor_stats = AsyncMock(side_effect=_stats)
 

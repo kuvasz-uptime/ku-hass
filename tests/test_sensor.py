@@ -8,7 +8,6 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfInformation
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
-from custom_components.kuvasz_uptime.const import DOMAIN
 from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
     KuvaszCoordinatorData,
@@ -29,6 +28,7 @@ from tests.conftest import (
     PUSH_MONITOR_UP,
     TCP_MONITOR_STATS,
     TCP_MONITOR_UP,
+    make_config_entry,
 )
 
 # Entity counts per monitor type (from sensor.py only):
@@ -59,7 +59,7 @@ DOCKER_NO_METRICS_SENSOR_COUNT = 1
 def _make_coordinator(hass, monitors, stats_map=None):
     client = MagicMock(spec=KuvaszClient)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval=30, entry_id="test_entry"
+        hass, make_config_entry(hass), client, scan_interval=30
     )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
@@ -69,14 +69,8 @@ def _make_coordinator(hass, monitors, stats_map=None):
 
 
 async def _setup_integration(hass, coordinator):
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = coordinator
-
-    from homeassistant.config_entries import ConfigEntry
-
-    entry = MagicMock(spec=ConfigEntry)
-    entry.entry_id = "test_entry"
-    entry.domain = DOMAIN
+    entry = coordinator.config_entry
+    entry.runtime_data = coordinator
 
     from custom_components.kuvasz_uptime.sensor import async_setup_entry
 
@@ -260,6 +254,14 @@ class TestTimestampSensors:
 
         heartbeat = next(e for e in entities if "last_heartbeat" in e.unique_id)
         assert heartbeat.native_value == datetime.fromisoformat("2024-01-01T01:00:00Z")
+
+    async def test_malformed_timestamp_reads_as_none(self, hass):
+        monitor = {**PUSH_MONITOR_UP, "lastHeartbeat": "not-a-timestamp"}
+        coordinator = _make_coordinator(hass, [monitor])
+        entities = await _setup_integration(hass, coordinator)
+
+        heartbeat = next(e for e in entities if "last_heartbeat" in e.unique_id)
+        assert heartbeat.native_value is None
 
     async def test_timestamp_sensor_device_class(self, hass):
         coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])

@@ -4,13 +4,34 @@ from __future__ import annotations
 
 from typing import Any, override
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.const import CONF_HOST
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import KuvaszCoordinator
 from .monitor_types import MONITOR_TYPES_BY_KEY
+
+MANUFACTURER = "Kuvasz Uptime"
+
+
+def server_device_identifier(entry_id: str) -> tuple[str, str]:
+    """Return the device identifier of the Kuvasz server (hub) device."""
+    return (DOMAIN, f"{entry_id}_server")
+
+
+def server_device_info(coordinator: KuvaszCoordinator) -> DeviceInfo:
+    """Return device registry information for the Kuvasz server itself."""
+    entry = coordinator.config_entry
+    return DeviceInfo(
+        identifiers={server_device_identifier(entry.entry_id)},
+        name="Kuvasz Server",
+        manufacturer=MANUFACTURER,
+        sw_version=coordinator.data.version_info.get("installedVersion"),
+        entry_type=DeviceEntryType.SERVICE,
+        configuration_url=entry.data[CONF_HOST],
+    )
 
 
 class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
@@ -57,7 +78,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
     @property
     def _instance_key(self) -> str:
         """Return a unique prefix for this config entry, scoping all identifiers."""
-        return self.coordinator.entry_id
+        return self.coordinator.config_entry.entry_id
 
     @property
     @override
@@ -69,6 +90,9 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
         return DeviceInfo(
             identifiers={(DOMAIN, monitor_ident)},
             name=self._monitor_name,
-            manufacturer="Kuvasz Uptime",
+            manufacturer=MANUFACTURER,
             model=f"{type_label} Monitor",
+            entry_type=DeviceEntryType.SERVICE,
+            configuration_url=self.coordinator.config_entry.data[CONF_HOST],
+            via_device=server_device_identifier(self._instance_key),
         )

@@ -10,7 +10,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import callback
@@ -323,7 +323,7 @@ class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class KuvaszOptionsFlowHandler(OptionsFlow):
+class KuvaszOptionsFlowHandler(OptionsFlowWithReload):
     """Options flow for updating scan interval and monitor selection."""
 
     async def async_step_init(

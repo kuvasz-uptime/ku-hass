@@ -6,9 +6,7 @@ rules:
   appropriate-polling: done
   brands: done
   common-modules: done
-  config-flow:
-    status: todo
-    comment: Config flow fields have no data_description yet.
+  config-flow: done
   config-flow-test-coverage: done
   dependency-transparency:
     status: exempt
@@ -30,9 +28,7 @@ rules:
     comment: Entities subscribe to no events; all data comes from the coordinator.
   entity-unique-id: done
   has-entity-name: done
-  runtime-data:
-    status: todo
-    comment: The coordinator is still stored in hass.data instead of entry.runtime_data.
+  runtime-data: done
   test-before-configure: done
   test-before-setup: done
   unique-config-entry: done
@@ -45,9 +41,7 @@ rules:
   entity-unavailable: done
   integration-owner: done
   log-when-unavailable: done
-  parallel-updates:
-    status: todo
-    comment: No platform sets PARALLEL_UPDATES.
+  parallel-updates: done
   reauthentication-flow: done
   test-coverage: done
 
@@ -75,7 +69,7 @@ rules:
   entity-disabled-by-default: todo
   entity-translations: done
   exception-translations: done
-  icon-translations: todo
+  icon-translations: done
   reconfiguration-flow: done
   repair-issues:
     status: exempt

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.components.update import UpdateEntity
-from homeassistant.config_entries import ConfigEntry
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN
@@ -12,6 +11,7 @@ from custom_components.kuvasz_uptime.coordinator import (
     KuvaszCoordinator,
     KuvaszCoordinatorData,
 )
+from tests.conftest import make_config_entry
 
 VERSION_INFO_UPDATE_AVAILABLE = {
     "installedVersion": "2.1.0",
@@ -38,7 +38,7 @@ VERSION_INFO_CHECKS_DISABLED = {
 def _make_coordinator(hass, version_info=None, update_checks_enabled=True):
     client = MagicMock(spec=KuvaszClient)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval=30, entry_id="test_entry"
+        hass, make_config_entry(hass), client, scan_interval=30
     )
     coordinator.data = KuvaszCoordinatorData(
         monitors=[],
@@ -49,18 +49,9 @@ def _make_coordinator(hass, version_info=None, update_checks_enabled=True):
     return coordinator
 
 
-def _make_entry(entry_id="test_entry"):
-    entry = MagicMock(spec=ConfigEntry)
-    entry.entry_id = entry_id
-    entry.domain = DOMAIN
-    return entry
-
-
 async def _setup_integration(hass, coordinator):
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = coordinator
-
-    entry = _make_entry()
+    entry = coordinator.config_entry
+    entry.runtime_data = coordinator
 
     from custom_components.kuvasz_uptime.update import async_setup_entry
 
@@ -161,7 +152,7 @@ class TestKuvaszUpdateEntity:
     async def test_unique_id_uses_entry_id(self, hass, entry_id, expected_uid):
         client = MagicMock(spec=KuvaszClient)
         coordinator = KuvaszCoordinator(
-            hass, client, scan_interval=30, entry_id=entry_id
+            hass, make_config_entry(hass, entry_id), client, scan_interval=30
         )
         coordinator.data = KuvaszCoordinatorData(
             monitors=[],
@@ -169,10 +160,8 @@ class TestKuvaszUpdateEntity:
             version_info=VERSION_INFO_UPDATE_AVAILABLE,
             update_checks_enabled=True,
         )
-        hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN][entry_id] = coordinator
-
-        entry = _make_entry(entry_id)
+        entry = coordinator.config_entry
+        entry.runtime_data = coordinator
 
         from custom_components.kuvasz_uptime.update import async_setup_entry
 

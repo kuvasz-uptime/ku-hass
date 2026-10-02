@@ -7,6 +7,7 @@ import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
+
+type KuvaszConfigEntry = ConfigEntry[KuvaszCoordinator]
 
 # Stats are fetched per monitor, so cap how many requests hit the instance at once.
 _MAX_PARALLEL_STATS_REQUESTS = 4
@@ -66,25 +69,27 @@ class KuvaszCoordinatorData:
 class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     """Coordinator that fetches and caches all Kuvasz monitor data."""
 
+    config_entry: KuvaszConfigEntry
+
     def __init__(  # noqa: PLR0913
         self,
         hass: HomeAssistant,
+        config_entry: KuvaszConfigEntry,
         client: KuvaszClient,
         *,
         scan_interval: int,
         selected_monitors: list[str] | None = None,
         stats_period: str = DEFAULT_STATS_PERIOD,
-        entry_id: str = "",
     ) -> None:
         """Initialize the coordinator with a Kuvasz API client and poll settings."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=scan_interval),
         )
         self.client = client
-        self.entry_id = entry_id
         self._selected_monitors: set[str] | None = (
             set(selected_monitors) if selected_monitors is not None else None
         )

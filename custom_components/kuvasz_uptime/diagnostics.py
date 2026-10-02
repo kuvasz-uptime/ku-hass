@@ -7,13 +7,12 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.const import CONF_HOST
 
-from .const import CONF_API_KEY, DOMAIN
+from .const import CONF_API_KEY
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-    from .coordinator import KuvaszCoordinator
+    from .coordinator import KuvaszConfigEntry
 
 # Credentials, plus anything that can point at private infrastructure or carry
 # secrets of its own (URLs with tokens, auth headers, request bodies).
@@ -34,10 +33,10 @@ def _without_logs(stats: dict[str, Any]) -> dict[str, Any]:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    _hass: HomeAssistant, entry: KuvaszConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     data = coordinator.data
     return {
         "entry": {

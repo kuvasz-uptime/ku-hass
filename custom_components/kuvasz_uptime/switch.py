@@ -13,20 +13,22 @@ from .entity import KuvaszMonitorEntity
 from .monitor_types import MONITOR_TYPES_BY_KEY
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import KuvaszCoordinator
+    from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
+
+# Each toggle is one API call; send them one at a time.
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    _hass: HomeAssistant,
+    entry: KuvaszConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Kuvasz switches for a config entry."""
-    coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(
         KuvaszEnabledSwitch(coordinator, monitor)
         for monitor in coordinator.data.monitors

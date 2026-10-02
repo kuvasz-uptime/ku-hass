@@ -22,7 +22,7 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | Average Memory Usage | Sensor (`MiB`, `data_size`)    | Docker (when metrics history is enabled)                |
 | SSL Valid Until      | Sensor (`timestamp`)           | HTTP (when SSL check is enabled)                        |
 | Last Heartbeat       | Sensor (`timestamp`)           | Push                                                    |
-| Kuvasz Update        | Update                         | Integration (when update checks are enabled)            |
+| Kuvasz Server        | Update                         | Integration (when update checks are enabled)            |
 
 **Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise. Extra attributes:
 
@@ -49,7 +49,9 @@ For Docker monitors, `image` is the image the container was created from, as the
 
 **Enabled switch** lets you pause and resume a monitor directly from Home Assistant. It is only created for monitor types that are writable in your Kuvasz instance. Read-only monitor types (e.g. managed via YAML/GitOps) only get the binary sensor.
 
-**Kuvasz Update** tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance. The entity belongs to a separate **Kuvasz Server** device.
+**Kuvasz Server** (`update.kuvasz_server_kuvasz_update`) tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance.
+
+Every integration entry also has a **Kuvasz Server** device, which shows the installed Kuvasz version and links to your instance's web UI. The monitor devices are listed as connected through it.
 
 ## Requirements
 
@@ -199,7 +201,7 @@ Check the API key in your Kuvasz configuration. If the key changed after setup, 
 - Check that the monitor is selected under **Configure**.
 - Average latency, packet loss, CPU and memory sensors only exist when latency or metrics history is enabled on the monitor. SSL sensors only exist when the SSL check is enabled. Reload the integration after changing these in Kuvasz.
 - The **Enabled** switch is missing when the monitor type is read-only in Kuvasz.
-- The **Kuvasz Update** entity only exists when update checks are enabled on your instance.
+- The update entity of the **Kuvasz Server** device only exists when update checks are enabled on your instance.
 
 **Collecting information for a bug report**
 
