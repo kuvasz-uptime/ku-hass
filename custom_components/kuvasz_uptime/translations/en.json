@@ -10,6 +10,14 @@
           "verify_ssl": "Verify SSL certificate",
           "scan_interval": "Polling interval (seconds)",
           "stats_period": "Statistics period"
+        },
+        "data_description": {
+          "name": "A name for this instance. It becomes the title of the integration entry and must be unique.",
+          "host": "The base URL of your Kuvasz instance, including the scheme and port.",
+          "api_key": "The API key configured on your Kuvasz instance. Leave it empty if your instance does not require one.",
+          "verify_ssl": "Turn this off if your instance uses a self-signed certificate.",
+          "scan_interval": "How often to poll your Kuvasz instance, between 10 and 3600 seconds.",
+          "stats_period": "The time window used for the uptime ratio and the average sensors."
         }
       },
       "monitors": {
@@ -17,7 +25,34 @@
         "data": {
           "selected_monitors": "Monitors to track"
         },
-        "description": "Choose which monitors should be exposed as devices. All monitors are selected by default."
+        "description": "Choose which monitors should be exposed as devices. All monitors are selected by default.",
+        "data_description": {
+          "selected_monitors": "Each selected monitor becomes a device in Home Assistant."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Kuvasz Uptime",
+        "description": "The API key for {name} was rejected. Enter a valid API key to reconnect.",
+        "data": {
+          "api_key": "API Key"
+        },
+        "data_description": {
+          "api_key": "The current API key configured on your Kuvasz instance."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure your Kuvasz Uptime instance",
+        "description": "Update the connection details. Leave the API key empty if your instance does not require one.",
+        "data": {
+          "host": "Host URL (e.g. http://192.168.1.10:8080)",
+          "api_key": "API Key",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "host": "The base URL of your Kuvasz instance, including the scheme and port.",
+          "api_key": "The API key configured on your Kuvasz instance. Leave it empty if your instance does not require one.",
+          "verify_ssl": "Turn this off if your instance uses a self-signed certificate."
+        }
       }
     },
     "error": {
@@ -27,7 +62,10 @@
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This instance is already configured."
+      "already_configured": "This instance is already configured.",
+      "different_instance": "None of this entry's monitors exist with the same name on the new host, so it looks like a different Kuvasz instance. Add it as a new integration entry instead.",
+      "reauth_successful": "Reauthentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful."
     }
   },
   "options": {
@@ -39,11 +77,18 @@
           "stats_period": "Statistics period",
           "selected_monitors": "Monitors to track"
         },
-        "description": "Update the polling interval, statistics period, or change which monitors are exposed as devices."
+        "description": "Update the polling interval, statistics period, or change which monitors are exposed as devices.",
+        "data_description": {
+          "scan_interval": "How often to poll your Kuvasz instance, between 10 and 3600 seconds.",
+          "stats_period": "The time window used for the uptime ratio and the average sensors.",
+          "selected_monitors": "Deselected monitors are removed from Home Assistant together with their entities."
+        }
       }
     },
     "abort": {
-      "cannot_connect": "Failed to connect to the given instance. Check that it is reachable and try again."
+      "cannot_connect": "Failed to connect to the given instance. Check that it is reachable and try again.",
+      "invalid_auth": "The API key was rejected by your Kuvasz instance. Update it via Reconfigure, then try again.",
+      "unknown": "Unexpected error while connecting to your Kuvasz instance. Check the logs for details."
     }
   },
   "entity": {
@@ -85,11 +130,20 @@
       "enabled": {
         "name": "Enabled"
       }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "The API key was rejected by your Kuvasz instance."
     },
-    "update": {
-      "kuvasz_update": {
-        "name": "Kuvasz Update"
-      }
+    "update_failed": {
+      "message": "Error communicating with your Kuvasz instance: {error}"
+    },
+    "enable_failed": {
+      "message": "Failed to enable monitor {monitor}: {error}"
+    },
+    "disable_failed": {
+      "message": "Failed to disable monitor {monitor}: {error}"
     }
   }
 }

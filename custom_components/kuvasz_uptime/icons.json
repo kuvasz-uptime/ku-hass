@@ -1,0 +1,40 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "enabled": {
+        "default": "mdi:play-circle",
+        "state": {
+          "off": "mdi:pause-circle"
+        }
+      }
+    },
+    "sensor": {
+      "uptime_ratio": {
+        "default": "mdi:chart-line"
+      },
+      "average_packet_loss": {
+        "default": "mdi:lan-disconnect"
+      },
+      "average_cpu_usage": {
+        "default": "mdi:cpu-64-bit"
+      },
+      "average_memory_usage": {
+        "default": "mdi:memory"
+      },
+      "ssl_valid_until": {
+        "default": "mdi:certificate"
+      },
+      "last_heartbeat": {
+        "default": "mdi:heart-pulse"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "default": "mdi:play",
+        "state": {
+          "off": "mdi:pause"
+        }
+      }
+    }
+  }
+}

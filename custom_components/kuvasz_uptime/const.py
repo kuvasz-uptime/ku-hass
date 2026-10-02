@@ -1,5 +1,12 @@
 """Constants for the Kuvasz Uptime integration."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.selector import SelectOptionDict
+
 DOMAIN = "kuvasz_uptime"
 
 CONF_API_KEY = "api_key"
@@ -15,7 +22,7 @@ MIN_SCAN_INTERVAL = 10
 MAX_SCAN_INTERVAL = 3600
 
 DEFAULT_STATS_PERIOD = "P1D"
-STATS_PERIOD_OPTIONS = [
+STATS_PERIOD_OPTIONS: list[SelectOptionDict] = [
     {"value": "PT1H", "label": "1 hour"},
     {"value": "PT6H", "label": "6 hours"},
     {"value": "PT12H", "label": "12 hours"},

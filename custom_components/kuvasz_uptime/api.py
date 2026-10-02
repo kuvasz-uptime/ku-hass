@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _HTTP_UNAUTHORIZED = 401
 _HTTP_CLIENT_ERROR = 400
+_REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 class KuvaszApiError(Exception):
@@ -45,7 +46,7 @@ class KuvaszClient:
         url = f"{self._base_url}{path}"
         try:
             async with self._session.get(
-                url, headers=self._headers, params=params
+                url, headers=self._headers, params=params, timeout=_REQUEST_TIMEOUT
             ) as resp:
                 if resp.status == _HTTP_UNAUTHORIZED:
                     msg = "Invalid API key"
@@ -60,12 +61,16 @@ class KuvaszClient:
         except TimeoutError as err:
             msg = "Request timed out"
             raise KuvaszApiError(msg) from err
+        except ValueError as err:
+            # A JSON content type with a body that isn't JSON (e.g. a proxy's page).
+            msg = f"Invalid JSON response for {path}"
+            raise KuvaszApiError(msg) from err
 
     async def _patch(self, path: str, data: dict[str, Any]) -> None:
         url = f"{self._base_url}{path}"
         try:
             async with self._session.patch(
-                url, headers=self._headers, json=data
+                url, headers=self._headers, json=data, timeout=_REQUEST_TIMEOUT
             ) as resp:
                 if resp.status == _HTTP_UNAUTHORIZED:
                     msg = "Invalid API key"
@@ -82,11 +87,13 @@ class KuvaszClient:
 
     async def get_settings(self) -> dict[str, Any]:
         """Return the Kuvasz instance settings."""
-        return await self._get("/api/v2/settings")
+        settings: dict[str, Any] = await self._get("/api/v2/settings")
+        return settings
 
     async def get_monitors(self, monitor_type: MonitorType) -> list[dict[str, Any]]:
         """Return all monitors of the given type."""
-        return await self._get(monitor_type.api_path)
+        monitors: list[dict[str, Any]] = await self._get(monitor_type.api_path)
+        return monitors
 
     async def patch_monitor(
         self, monitor_type: MonitorType, monitor_id: int, data: dict[str, Any]
@@ -98,9 +105,10 @@ class KuvaszClient:
         self, monitor_type: MonitorType, monitor_id: int, period: str
     ) -> dict[str, Any]:
         """Return statistics for a monitor over the given period."""
-        return await self._get(
+        stats: dict[str, Any] = await self._get(
             f"{monitor_type.api_path}/{monitor_id}/stats", params={"period": period}
         )
+        return stats
 
     async def get_all_monitors(
         self, monitor_types: Sequence[MonitorType]
@@ -117,6 +125,8 @@ class KuvaszClient:
 
         monitors: list[dict[str, Any]] = []
         for monitor_type, result in zip(monitor_types, results, strict=True):
+            if isinstance(result, KuvaszAuthError):
+                raise result
             if isinstance(result, BaseException):
                 msg = f"Failed to fetch {monitor_type.key} monitors: {result}"
                 raise KuvaszApiError(msg) from result

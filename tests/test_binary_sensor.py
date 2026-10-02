@@ -23,13 +23,14 @@ from tests.conftest import (
     PUSH_MONITOR_UP,
     TCP_MONITOR_DOWN,
     TCP_MONITOR_UP,
+    make_config_entry,
 )
 
 
 def _make_coordinator(hass, monitors, stats_map=None):
     client = MagicMock(spec=KuvaszClient)
     coordinator = KuvaszCoordinator(
-        hass, client, scan_interval=30, entry_id="test_entry"
+        hass, make_config_entry(hass), client, scan_interval=30
     )
     coordinator.data = KuvaszCoordinatorData(
         monitors=monitors,
@@ -39,14 +40,8 @@ def _make_coordinator(hass, monitors, stats_map=None):
 
 
 async def _setup_integration(hass, coordinator):
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = coordinator
-
-    from homeassistant.config_entries import ConfigEntry
-
-    entry = MagicMock(spec=ConfigEntry)
-    entry.entry_id = "test_entry"
-    entry.domain = DOMAIN
+    entry = coordinator.config_entry
+    entry.runtime_data = coordinator
 
     from custom_components.kuvasz_uptime.binary_sensor import async_setup_entry
 
@@ -608,3 +603,41 @@ class TestDockerBinarySensor:
 
         uptime = next(e for e in entities if "_uptime_status" in e.unique_id)
         assert uptime.unique_id == "kuvasz_uptime_test_entry_docker_60_uptime_status"
+
+
+class TestRecorderExclusions:
+    async def test_unrecorded_attributes_exist(self, hass):
+        """Guard against typos: every excluded key must be a real attribute."""
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP, PUSH_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        unrecorded = {
+            type(e): e._unrecorded_attributes  # noqa: SLF001
+            for e in entities
+        }
+        for cls, keys in unrecorded.items():
+            if not keys:
+                continue
+            produced = set().union(
+                *(e.extra_state_attributes for e in entities if type(e) is cls)
+            )
+            assert keys <= produced, cls.__name__
+
+
+class TestAvailability:
+    async def test_unavailable_once_monitor_disappears(self, hass):
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+        assert all(e.available for e in entities)
+
+        coordinator.data = KuvaszCoordinatorData(monitors=[], stats={})
+
+        assert not any(e.available for e in entities)
+
+    async def test_unavailable_when_coordinator_fails(self, hass):
+        coordinator = _make_coordinator(hass, [HTTP_MONITOR_UP])
+        entities = await _setup_integration(hass, coordinator)
+
+        coordinator.last_update_success = False
+
+        assert not any(e.available for e in entities)

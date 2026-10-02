@@ -1,6 +1,12 @@
 """Shared fixtures for Kuvasz integration tests."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
+
+from custom_components.kuvasz_uptime.const import DOMAIN
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
@@ -9,6 +15,17 @@ pytest_plugins = "pytest_homeassistant_custom_component"
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Allow HA to discover integrations under custom_components/."""
     return
+
+
+@pytest.fixture
+def snapshot(snapshot):
+    """
+    Use the HA snapshot extension.
+
+    The harness overrides syrupy's fixture to do this, but with syrupy 6 the
+    plugins register in the other order and syrupy's own fixture wins.
+    """
+    return snapshot.use_extension(HomeAssistantSnapshotExtension)
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +80,8 @@ HTTP_MONITOR_DOWN = {
     "uptimeStatus": "DOWN",
     "sslStatus": "INVALID",
     "sslCheckEnabled": True,
+    "uptimeError": "Reason: Connect Error: Connection refused: example.com/10.0.0.5",
+    "sslError": "SSL Handshake failed: PKIX path validation failed",
 }
 
 HTTP_MONITOR_NO_SSL = {
@@ -76,6 +95,7 @@ HTTP_MONITOR_NO_SSL = {
 PUSH_MONITOR_UP = {
     "id": 20,
     "name": "My Cron Job",
+    "clientSecret": "0b8c3f7e-2d41-4c9a-9e57-6f1a2b3c4d5e",
     "heartbeatInterval": 300,
     "gracePeriod": 60,
     "enabled": True,
@@ -471,3 +491,74 @@ SETTINGS_RESPONSE_NO_DOCKER = {
         }
     },
 }
+
+
+def make_config_entry(hass, entry_id="test_entry"):
+    """Return a config entry for building a coordinator directly in tests."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id=entry_id,
+        data={"name": "Test Instance", "host": "http://kuvasz.local:8080"},
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+# ---------------------------------------------------------------------------
+# Full integration setup
+# ---------------------------------------------------------------------------
+
+MONITORS = [
+    HTTP_MONITOR_UP,
+    HTTP_MONITOR_DOWN,
+    PUSH_MONITOR_UP,
+    ICMP_MONITOR_UP,
+    TCP_MONITOR_UP,
+    DNS_MONITOR_UP,
+    DOCKER_MONITOR_UP,
+]
+
+STATS = {
+    ("http", 1): HTTP_MONITOR_STATS,
+    ("http", 2): HTTP_MONITOR_STATS_NO_LATENCY,
+    ("push", 20): PUSH_MONITOR_STATS,
+    ("icmp", 30): ICMP_MONITOR_STATS,
+    ("tcp", 40): TCP_MONITOR_STATS,
+    ("dns", 50): DNS_MONITOR_STATS,
+    ("docker", 60): DOCKER_MONITOR_STATS,
+}
+
+
+async def setup_full_integration(hass, platforms, settings=SETTINGS_RESPONSE):
+    """Set up a config entry with every monitor type, loading only `platforms`."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        entry_id="test_entry",
+        unique_id="http://kuvasz.local:8080",
+        data={
+            "name": "Test Instance",
+            "host": "http://kuvasz.local:8080",
+            "api_key": "test-key",
+            "scan_interval": 30,
+            "stats_period": "P1D",
+            "selected_monitors": [f"{m['_type']}_{m['id']}" for m in MONITORS],
+        },
+    )
+    entry.add_to_hass(hass)
+
+    async def _stats(spec, monitor_id, period):
+        return STATS[(spec.key, monitor_id)]
+
+    with (
+        patch("custom_components.kuvasz_uptime.PLATFORMS", platforms),
+        patch("custom_components.kuvasz_uptime.KuvaszClient") as mock_client,
+    ):
+        instance = mock_client.return_value
+        instance.get_settings = AsyncMock(return_value=settings)
+        instance.get_all_monitors = AsyncMock(return_value=[dict(m) for m in MONITORS])
+        instance.get_monitor_stats = AsyncMock(side_effect=_stats)
+
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    return entry

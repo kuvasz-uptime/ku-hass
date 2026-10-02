@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import KuvaszApiError, KuvaszClient
+from .api import KuvaszApiError, KuvaszAuthError, KuvaszClient
 from .const import DEFAULT_STATS_PERIOD, DOMAIN
 from .monitor_types import (
     MONITOR_TYPES_BY_KEY,
@@ -21,6 +23,11 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
+
+type KuvaszConfigEntry = ConfigEntry[KuvaszCoordinator]
+
+# Stats are fetched per monitor, so cap how many requests hit the instance at once.
+_MAX_PARALLEL_STATS_REQUESTS = 4
 
 
 class KuvaszCoordinatorData:
@@ -37,11 +44,16 @@ class KuvaszCoordinatorData:
     ) -> None:
         """Initialize coordinator data with monitors, stats and read-only types."""
         self.monitors = monitors
+        self._monitors_by_key = {(m["_type"], m["id"]): m for m in monitors}
         # stats keyed by "{type}_{id}"
         self.stats = stats
         self.read_only_types = read_only_types
         self.version_info: dict[str, Any] = version_info or {}
         self.update_checks_enabled = update_checks_enabled
+
+    def monitor(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
+        """Return the given monitor's data, or empty dict if it no longer exists."""
+        return self._monitors_by_key.get((monitor_type, monitor_id), {})
 
     def monitor_stats(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
         """Return stats dict for the given monitor, or empty dict if unavailable."""
@@ -57,30 +69,36 @@ class KuvaszCoordinatorData:
 class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     """Coordinator that fetches and caches all Kuvasz monitor data."""
 
+    config_entry: KuvaszConfigEntry
+
     def __init__(  # noqa: PLR0913
         self,
         hass: HomeAssistant,
+        config_entry: KuvaszConfigEntry,
         client: KuvaszClient,
         *,
         scan_interval: int,
         selected_monitors: list[str] | None = None,
         stats_period: str = DEFAULT_STATS_PERIOD,
-        entry_id: str = "",
     ) -> None:
         """Initialize the coordinator with a Kuvasz API client and poll settings."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=scan_interval),
         )
         self.client = client
-        self.entry_id = entry_id
         self._selected_monitors: set[str] | None = (
             set(selected_monitors) if selected_monitors is not None else None
         )
         self._stats_period = stats_period
+        # Registry id of the server device, set during setup before the platforms
+        # load; monitor devices link to it.
+        self.server_device_id: str | None = None
 
+    @override
     async def _async_update_data(self) -> KuvaszCoordinatorData:
         try:
             settings = await self.client.get_settings()
@@ -95,9 +113,16 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
                     if f"{m['_type']}_{m['id']}" in self._selected_monitors
                 ]
             stats = await self._fetch_stats(monitors)
+        except KuvaszAuthError as err:
+            raise ConfigEntryAuthFailed(
+                translation_domain=DOMAIN, translation_key="auth_failed"
+            ) from err
         except KuvaszApiError as err:
-            msg = f"Error during communication with your Kuvasz instance: {err}"
-            raise UpdateFailed(msg) from err
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
         return KuvaszCoordinatorData(
             monitors=monitors,
@@ -110,6 +135,8 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
     async def _fetch_stats(
         self, monitors: list[dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
+        semaphore = asyncio.Semaphore(_MAX_PARALLEL_STATS_REQUESTS)
+
         async def _get_stats(monitor: dict[str, Any]) -> tuple[str, dict[str, Any]]:
             monitor_type = monitor["_type"]
             monitor_id = monitor["id"]
@@ -118,9 +145,10 @@ class KuvaszCoordinator(DataUpdateCoordinator[KuvaszCoordinatorData]):
             if spec is None:
                 return key, {}
             try:
-                data = await self.client.get_monitor_stats(
-                    spec, monitor_id, self._stats_period
-                )
+                async with semaphore:
+                    data = await self.client.get_monitor_stats(
+                        spec, monitor_id, self._stats_period
+                    )
             except KuvaszApiError:
                 _LOGGER.debug("Could not fetch stats for monitor %s", key)
                 data = {}

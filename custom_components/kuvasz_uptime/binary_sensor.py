@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -10,7 +10,6 @@ from homeassistant.components.binary_sensor import (
 )
 
 from .const import (
-    DOMAIN,
     MONITOR_TYPE_DNS,
     MONITOR_TYPE_DOCKER,
     MONITOR_TYPE_HTTP,
@@ -23,11 +22,12 @@ from .const import (
 from .entity import KuvaszMonitorEntity
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import KuvaszCoordinator
+    from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
+
+PARALLEL_UPDATES = 0
 
 
 def _format_record_matchers(matchers: list[dict[str, Any]] | None) -> list[str]:
@@ -43,12 +43,12 @@ def _format_record_matchers(matchers: list[dict[str, Any]] | None) -> list[str]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    _hass: HomeAssistant,
+    entry: KuvaszConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Kuvasz binary sensors for a config entry."""
-    coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[BinarySensorEntity] = []
 
     for monitor in coordinator.data.monitors:
@@ -65,6 +65,17 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "uptime_status"
+    # These move on every check (Kuvasz bumps a push monitor's updated_at with
+    # every heartbeat). Leaving them out of the recorder keeps it from storing a
+    # new attributes row each time; the state row is still written.
+    _unrecorded_attributes = frozenset(
+        {
+            "last_uptime_check",
+            "next_uptime_check",
+            "next_expected_heartbeat",
+            "updated_at",
+        }
+    )
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the uptime binary sensor."""
@@ -73,14 +84,16 @@ class KuvaszUptimeBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "uptime_status")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor's uptime status is UP."""
-        status = self._monitor_data.get("uptimeStatus")
+        status: str | None = self._monitor_data.get("uptimeStatus")
         if status is None:
             return None
         return status == UPTIME_STATUS_UP
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return monitor configuration as extra state attributes."""
         data = self._monitor_data
@@ -193,6 +206,7 @@ class KuvaszEnabledBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "enabled")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor is enabled."""
         enabled = self._monitor_data.get("enabled")
@@ -206,6 +220,9 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "ssl_status"
+    # These move on every check. Leaving them out of the recorder keeps it from
+    # storing a new attributes row each time; the state row is still written.
+    _unrecorded_attributes = frozenset({"last_ssl_check", "next_ssl_check"})
 
     def __init__(self, coordinator: KuvaszCoordinator, monitor: dict[str, Any]) -> None:
         """Initialize the SSL binary sensor."""
@@ -214,14 +231,16 @@ class KuvaszSslBinarySensor(KuvaszMonitorEntity, BinarySensorEntity):
         self.entity_id = self._build_entity_id("binary_sensor", "ssl_status")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the SSL certificate is invalid (problem detected)."""
-        status = self._monitor_data.get("sslStatus")
+        status: str | None = self._monitor_data.get("sslStatus")
         if status is None:
             return None
         return status == SSL_STATUS_INVALID
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return SSL certificate details as extra state attributes."""
         data = self._monitor_data

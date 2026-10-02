@@ -1,4 +1,5 @@
 aiohttp
+mypy==2.4.0
 pytest
 pytest-asyncio
 pytest-homeassistant-custom-component==0.13.367

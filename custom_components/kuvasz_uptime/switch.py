@@ -2,29 +2,33 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.exceptions import HomeAssistantError
 
+from .api import KuvaszApiError
 from .const import DOMAIN
 from .entity import KuvaszMonitorEntity
 from .monitor_types import MONITOR_TYPES_BY_KEY
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import KuvaszCoordinator
+    from .coordinator import KuvaszConfigEntry, KuvaszCoordinator
+
+# Each toggle is one API call; send them one at a time.
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    _hass: HomeAssistant,
+    entry: KuvaszConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Kuvasz switches for a config entry."""
-    coordinator: KuvaszCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(
         KuvaszEnabledSwitch(coordinator, monitor)
         for monitor in coordinator.data.monitors
@@ -44,6 +48,7 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
         self.entity_id = self._build_entity_id("switch", "enabled")
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return True if the monitor is currently enabled."""
         enabled = self._monitor_data.get("enabled")
@@ -51,18 +56,30 @@ class KuvaszEnabledSwitch(KuvaszMonitorEntity, SwitchEntity):
             return None
         return bool(enabled)
 
+    @override
     async def async_turn_on(self, **_kwargs: Any) -> None:
         """Enable the monitor."""
         await self._set_enabled(enabled=True)
 
+    @override
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Disable the monitor."""
         await self._set_enabled(enabled=False)
 
     async def _set_enabled(self, *, enabled: bool) -> None:
-        await self.coordinator.client.patch_monitor(
-            MONITOR_TYPES_BY_KEY[self._monitor_type],
-            self._monitor_id,
-            {"enabled": enabled},
-        )
+        try:
+            await self.coordinator.client.patch_monitor(
+                MONITOR_TYPES_BY_KEY[self._monitor_type],
+                self._monitor_id,
+                {"enabled": enabled},
+            )
+        except KuvaszApiError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="enable_failed" if enabled else "disable_failed",
+                translation_placeholders={
+                    "monitor": self._monitor_name,
+                    "error": str(err),
+                },
+            ) from err
         await self.coordinator.async_request_refresh()

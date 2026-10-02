@@ -2,15 +2,36 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, override
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.const import CONF_HOST
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import KuvaszCoordinator
 from .monitor_types import MONITOR_TYPES_BY_KEY
+
+MANUFACTURER = "Kuvasz Uptime"
+
+
+def server_device_identifier(entry_id: str) -> tuple[str, str]:
+    """Return the device identifier of the Kuvasz server (hub) device."""
+    return (DOMAIN, f"{entry_id}_server")
+
+
+def server_device_info(coordinator: KuvaszCoordinator) -> DeviceInfo:
+    """Return device registry information for the Kuvasz server itself."""
+    entry = coordinator.config_entry
+    return DeviceInfo(
+        identifiers={server_device_identifier(entry.entry_id)},
+        name="Kuvasz Server",
+        manufacturer=MANUFACTURER,
+        sw_version=coordinator.data.version_info.get("installedVersion"),
+        entry_type=DeviceEntryType.SERVICE,
+        configuration_url=entry.data[CONF_HOST],
+    )
 
 
 class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
@@ -42,10 +63,13 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
 
     @property
     def _monitor_data(self) -> dict[str, Any]:
-        for m in self.coordinator.data.monitors:
-            if m["id"] == self._monitor_id and m["_type"] == self._monitor_type:
-                return m
-        return {}
+        return self.coordinator.data.monitor(self._monitor_type, self._monitor_id)
+
+    @property
+    @override
+    def available(self) -> bool:
+        """Return False once the monitor is no longer reported by the instance."""
+        return super().available and bool(self._monitor_data)
 
     @property
     def _monitor_stats(self) -> dict[str, Any]:
@@ -54,17 +78,23 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
     @property
     def _instance_key(self) -> str:
         """Return a unique prefix for this config entry, scoping all identifiers."""
-        return self.coordinator.entry_id
+        return self.coordinator.config_entry.entry_id
 
     @property
+    @override
     def device_info(self) -> DeviceInfo:
         """Return device registry information for this monitor."""
         spec = MONITOR_TYPES_BY_KEY.get(self._monitor_type)
         type_label = spec.device_label if spec else self._monitor_type.upper()
         monitor_ident = f"{self._instance_key}_{self._monitor_type}_{self._monitor_id}"
-        return DeviceInfo(
+        info = DeviceInfo(
             identifiers={(DOMAIN, monitor_ident)},
             name=self._monitor_name,
-            manufacturer="Kuvasz Uptime",
+            manufacturer=MANUFACTURER,
             model=f"{type_label} Monitor",
+            entry_type=DeviceEntryType.SERVICE,
+            configuration_url=self.coordinator.config_entry.data[CONF_HOST],
         )
+        if self.coordinator.server_device_id is not None:
+            info["via_device_id"] = self.coordinator.server_device_id
+        return info

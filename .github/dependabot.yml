@@ -6,3 +6,9 @@ updates:
       interval: "daily"
     pull-request-branch-name:
       separator: "-"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    pull-request-branch-name:
+      separator: "-"

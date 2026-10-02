@@ -22,7 +22,7 @@ Each monitor from your Kuvasz Uptime instance becomes a device in Home Assistant
 | Average Memory Usage | Sensor (`MiB`, `data_size`)    | Docker (when metrics history is enabled)                |
 | SSL Valid Until      | Sensor (`timestamp`)           | HTTP (when SSL check is enabled)                        |
 | Last Heartbeat       | Sensor (`timestamp`)           | Push                                                    |
-| Kuvasz Update        | Update                         | Integration (when update checks are enabled)            |
+| Kuvasz Server        | Update                         | Integration (when update checks are enabled)            |
 
 **Uptime binary sensor** is `on` when the monitor is `UP` and `off` otherwise. Extra attributes:
 
@@ -49,11 +49,13 @@ For Docker monitors, `image` is the image the container was created from, as the
 
 **Enabled switch** lets you pause and resume a monitor directly from Home Assistant. It is only created for monitor types that are writable in your Kuvasz instance. Read-only monitor types (e.g. managed via YAML/GitOps) only get the binary sensor.
 
-**Kuvasz Update** tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance. The entity belongs to a separate **Kuvasz Server** device.
+**Kuvasz Server** (`update.kuvasz_server_kuvasz_update`) tracks the installed and latest available version of your Kuvasz instance. It is only created when update checks are enabled on your Kuvasz instance.
+
+Every integration entry also has a **Kuvasz Server** device, which shows the installed Kuvasz version and links to your instance's web UI. The monitor devices are listed as connected through it.
 
 ## Requirements
 
-- Home Assistant 2026.3 or newer
+- Home Assistant 2026.8 or newer
 - Kuvasz Uptime 3.2.0 or newer
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (self-hosted)
 - Your [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) for your Kuvasz instance
@@ -80,18 +82,144 @@ Or use the direct link: [![Open your Home Assistant instance and open a reposito
 
 1. Go to **Settings → Devices & Services → Add Integration**.
 2. Search for **Kuvasz Uptime**.
-3. Enter an **Instance name**, your instance URL (e.g. `http://192.168.1.10:8080`), and API key.
+3. Fill in the connection details (see below).
 4. Select which monitors to expose as devices (all are selected by default).
 
-The instance name must be unique across all configured Kuvasz entries. It is used to scope every entity and device identifier, so two monitors with the same numeric ID on different hosts never collide. Multiple instances can be added by repeating the setup with a different name and host.
+| Parameter              | Description                                                                                                                             |
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| Instance name          | A name for this Kuvasz instance, used as the title of the integration entry. Must be unique across your Kuvasz entries.                 |
+| Host URL               | The base URL of your Kuvasz instance, including the scheme and port, e.g. `http://192.168.1.10:8080`.                                    |
+| API key                | The [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) of your instance. Leave it empty if your instance does not require one. |
+| Verify SSL certificate | Turn this off if your instance uses a self-signed certificate (default: on).                                                            |
+| Polling interval       | How often to refresh monitor state, in seconds (default: 30, min: 10, max: 3600).                                                       |
+| Statistics period      | The time window for uptime ratio and average sensors: 1 hour, 6 hours, 12 hours, 1 day, 7 days or 30 days (default: 1 day).            |
+
+Multiple instances can be added by repeating the setup with a different name and host. The same host can only be added once.
 
 You can change options later via the **Configure** button on the integration card:
 
-- **Polling interval** - how often to refresh monitor state (default: 30 s, min: 10 s, max: 300 s)
+- **Polling interval** - how often to refresh monitor state (default: 30 s, min: 10 s, max: 3600 s)
 - **Stats period** - the time window used for uptime percentage and response time stats (default: 24 h)
 - **Monitor selection** - add or remove monitors without re-adding the integration
 
 Monitors that are deselected are removed from the HA device registry (including all their entities).
+
+To change the instance URL, API key or SSL verification, choose **Reconfigure** from the integration entry's menu. If your API key is rotated or revoked, Home Assistant prompts you to re-authenticate with the new key under **Settings → Devices & Services**.
+
+## Data updates
+
+The integration polls your Kuvasz instance once per polling interval. Each poll fetches the instance settings, the monitor list, and the statistics of every selected monitor (at most 4 statistics requests run at the same time). Turning an **Enabled** switch on or off triggers an immediate refresh.
+
+Kuvasz runs its own checks on each monitor's schedule, so a status change shows up in Home Assistant within one polling interval after Kuvasz detects it.
+
+## Use cases
+
+- Get a phone notification or a voice announcement when a website, server or container goes down.
+- Flash a light or change a dashboard colour while any monitor is down.
+- Get a reminder well before an SSL certificate expires.
+- Pause monitors from an automation during planned maintenance, so Kuvasz does not alert on expected downtime.
+- Track container CPU and memory usage of Docker monitors on Home Assistant dashboards.
+
+## Examples
+
+Entity IDs follow the pattern `<platform>.kuvasz_<monitor type>_<monitor name>_<entity>`, e.g. `binary_sensor.kuvasz_http_my_website_uptime_status`.
+
+Notify when a monitor has been down for two minutes:
+
+```yaml
+automation:
+  - alias: "Notify when My Website is down"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.kuvasz_http_my_website_uptime_status
+        to: "off"
+        for: "00:02:00"
+    actions:
+      - action: notify.notify
+        data:
+          message: >
+            My Website is down: {{ state_attr(trigger.entity_id, 'uptime_error') }}
+```
+
+Get a reminder when an SSL certificate expires in less than 14 days:
+
+```yaml
+automation:
+  - alias: "SSL certificate of My Website expires soon"
+    triggers:
+      - trigger: template
+        value_template: >
+          {% set valid_until = as_datetime(states('sensor.kuvasz_http_my_website_ssl_valid_until'), None) %}
+          {{ valid_until is not none and valid_until < now() + timedelta(days=14) }}
+    actions:
+      - action: notify.notify
+        data:
+          message: "The SSL certificate of My Website expires on {{ states('sensor.kuvasz_http_my_website_ssl_valid_until') }}."
+```
+
+Pause a monitor during a nightly maintenance window:
+
+```yaml
+automation:
+  - alias: "Pause My Website during maintenance"
+    triggers:
+      - trigger: time
+        at: "02:00:00"
+    actions:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.kuvasz_http_my_website_enabled
+      - delay: "00:30:00"
+      - action: switch.turn_on
+        target:
+          entity_id: switch.kuvasz_http_my_website_enabled
+```
+
+## Known limitations
+
+- Monitors created in Kuvasz after the integration was set up are not added automatically. Select them via **Configure**.
+- Entities are created when the integration loads. If you enable SSL checks or metrics history on a monitor, or change which monitor types are read-only in Kuvasz, reload the integration to add or remove the matching entities.
+- A monitor deleted in Kuvasz shows its entities as unavailable until the integration is reloaded, which then removes its device.
+- The **Enabled** switch is only available for monitor types that are writable in your Kuvasz instance.
+- Status pages and notification integrations configured in Kuvasz are not exposed in Home Assistant.
+- Each poll makes one statistics request per selected monitor. With many monitors, consider a longer polling interval.
+
+## Troubleshooting
+
+**"Failed to connect to the given instance"**
+
+- Make sure the host URL includes the scheme and port, e.g. `http://192.168.1.10:8080`.
+- Check that the Kuvasz instance is reachable from the machine running Home Assistant (not just from your browser), especially when either runs in a container.
+- If your instance uses a self-signed certificate, turn off **Verify SSL certificate**. For an existing entry, use **Reconfigure**.
+
+**"Invalid API key"**
+
+Check the API key in your Kuvasz configuration. If the key changed after setup, Home Assistant asks you to re-authenticate.
+
+**A monitor or one of its entities is missing**
+
+- Check that the monitor is selected under **Configure**.
+- Average latency, packet loss, CPU and memory sensors only exist when latency or metrics history is enabled on the monitor. SSL sensors only exist when the SSL check is enabled. Reload the integration after changing these in Kuvasz.
+- The **Enabled** switch is missing when the monitor type is read-only in Kuvasz.
+- The update entity of the **Kuvasz Server** device only exists when update checks are enabled on your instance.
+
+**Collecting information for a bug report**
+
+Enable debug logging from the integration page (**Enable debug logging**), or add this to `configuration.yaml`:
+
+```yaml
+logger:
+  logs:
+    custom_components.kuvasz_uptime: debug
+```
+
+You can also download diagnostics from the integration entry's menu (**Download diagnostics**). The API key, hosts, URLs and request headers and bodies are redacted from the file, but review it before attaching it to a public issue.
+
+## Removal
+
+1. Go to **Settings → Devices & Services → Kuvasz Uptime**.
+2. Open the menu of the entry and choose **Delete**. This removes all of its devices and entities. Nothing changes on your Kuvasz instance.
+3. To uninstall the integration itself, open **HACS**, find **Kuvasz Uptime**, choose **Remove** from its menu, and restart Home Assistant. For a manual installation, delete `config/custom_components/kuvasz_uptime/` and restart.
 
 ## Contributing
 

@@ -1,0 +1,7 @@
+[run]
+source = custom_components/kuvasz_uptime
+
+[report]
+fail_under = 95
+show_missing = true
+skip_covered = true

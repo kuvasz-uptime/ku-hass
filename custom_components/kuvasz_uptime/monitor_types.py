@@ -84,7 +84,8 @@ MONITOR_TYPES_BY_KEY: dict[str, MonitorType] = {m.key: m for m in MONITOR_TYPES}
 
 
 def _editability(settings: Mapping[str, Any]) -> Mapping[str, Any]:
-    return settings.get("app", {}).get("editabilityState", {})
+    editability: Mapping[str, Any] = settings.get("app", {}).get("editabilityState", {})
+    return editability
 
 
 def supported_monitor_types(settings: Mapping[str, Any]) -> tuple[MonitorType, ...]:

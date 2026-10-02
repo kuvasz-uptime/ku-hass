@@ -1,12 +1,17 @@
 """Tests for the Kuvasz config flow."""
 
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.selector import TextSelectorType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.kuvasz_uptime.api import KuvaszApiError, KuvaszAuthError
 from custom_components.kuvasz_uptime.const import (
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_MONITORS,
@@ -491,6 +496,25 @@ class TestOptionsFlow:
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "cannot_connect"
 
+    @pytest.mark.parametrize(
+        ("error", "reason"),
+        [
+            (KuvaszAuthError("Invalid API key"), "invalid_auth"),
+            (RuntimeError("boom"), "unknown"),
+        ],
+    )
+    async def test_options_flow_aborts_with_specific_reason(self, hass, error, reason):
+        entry = await self._setup_entry(hass)
+
+        with patch(
+            "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+        ) as MockClient:
+            MockClient.return_value.get_settings = AsyncMock(side_effect=error)
+            result = await hass.config_entries.options.async_init(entry.entry_id)
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == reason
+
     async def test_options_flow_shows_all_current_monitors_as_options(self, hass):
         entry = await self._setup_entry(hass)
         result = await self._start_options_flow(hass, entry)
@@ -553,3 +577,238 @@ class TestOptionsFlow:
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert entry.options[CONF_SELECTED_MONITORS] == ["push_20"]
+
+
+def _make_existing_entry(hass, **data):
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My Kuvasz",
+        unique_id="http://kuvasz.local:8080",
+        data={
+            "name": "My Kuvasz",
+            "host": "http://kuvasz.local:8080",
+            "api_key": "old-api-key",
+            "verify_ssl": True,
+            "scan_interval": 30,
+            "stats_period": "P1D",
+            "selected_monitors": ALL_MONITOR_KEYS,
+            **data,
+        },
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+@contextmanager
+def _patched_client(settings_error=None):
+    """Patch the config flow's client and yield the mock class."""
+    with patch(
+        "custom_components.kuvasz_uptime.config_flow.KuvaszClient"
+    ) as mock_client:
+        instance = mock_client.return_value
+        instance.get_settings = AsyncMock(
+            return_value=SETTINGS_RESPONSE, side_effect=settings_error
+        )
+        instance.get_all_monitors = AsyncMock(return_value=ALL_MONITORS)
+        yield mock_client
+
+
+@pytest.fixture
+def mock_setup_entry():
+    with patch(
+        "custom_components.kuvasz_uptime.async_setup_entry", return_value=True
+    ) as mock_setup:
+        yield mock_setup
+
+
+class TestReauthFlow:
+    async def test_shows_form(self, hass):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reauth_flow(hass)
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "reauth_confirm"
+        assert result["description_placeholders"] == {"name": "My Kuvasz"}
+
+    async def test_updates_api_key_and_reloads(self, hass, mock_setup_entry):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reauth_flow(hass)
+
+        with _patched_client() as mock_client:
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"api_key": "new-api-key"}
+            )
+            await hass.async_block_till_done()
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "reauth_successful"
+        assert entry.data["api_key"] == "new-api-key"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+        assert mock_client.call_args.kwargs["api_key"] == "new-api-key"
+        mock_setup_entry.assert_called_once()
+
+    async def test_invalid_key_shows_error(self, hass):
+        from custom_components.kuvasz_uptime.api import KuvaszAuthError
+
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reauth_flow(hass)
+
+        with _patched_client(settings_error=KuvaszAuthError("bad key")):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"api_key": "still-wrong"}
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"] == {"base": "invalid_auth"}
+        assert entry.data["api_key"] == "old-api-key"
+
+    async def test_uses_stored_verify_ssl(self, hass, mock_setup_entry):
+        entry = _make_existing_entry(hass, verify_ssl=False)
+        result = await entry.start_reauth_flow(hass)
+
+        with (
+            _patched_client(),
+            patch(
+                "custom_components.kuvasz_uptime.config_flow.async_get_clientsession"
+            ) as mock_session,
+        ):
+            await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"api_key": "new-api-key"}
+            )
+            await hass.async_block_till_done()
+
+        mock_session.assert_called_once_with(hass, verify_ssl=False)
+
+
+class TestReconfigureFlow:
+    async def test_shows_form_prefilled(self, hass):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "reconfigure"
+        host_key = next(k for k in result["data_schema"].schema if str(k) == "host")
+        assert host_key.description == {"suggested_value": "http://kuvasz.local:8080"}
+
+    async def test_prefilled_api_key_is_masked(self, hass):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        schema = result["data_schema"].schema
+        key = next(k for k in schema if str(k) == "api_key")
+        assert schema[key].config["type"] == TextSelectorType.PASSWORD
+
+    async def test_updates_connection_details(self, hass, mock_setup_entry):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {
+                    "host": "https://kuvasz.example.com/",
+                    "api_key": "new-api-key",
+                    "verify_ssl": False,
+                },
+            )
+            await hass.async_block_till_done()
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "https://kuvasz.example.com"
+        assert entry.data["api_key"] == "new-api-key"
+        assert entry.data["verify_ssl"] is False
+        assert entry.unique_id == "https://kuvasz.example.com"
+        # Untouched settings survive the reconfigure.
+        assert entry.data["selected_monitors"] == ALL_MONITOR_KEYS
+        mock_setup_entry.assert_called_once()
+
+    async def test_empty_api_key_clears_it(self, hass, mock_setup_entry):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {"host": "http://kuvasz.local:8080", "verify_ssl": True},
+            )
+            await hass.async_block_till_done()
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["api_key"] is None
+
+    async def test_aborts_when_host_belongs_to_another_entry(self, hass):
+        entry = _make_existing_entry(hass)
+        _make_existing_entry(hass, host="http://other.local:8080")
+        hass.config_entries.async_update_entry(
+            hass.config_entries.async_entries(DOMAIN)[1],
+            unique_id="http://other.local:8080",
+        )
+        result = await entry.start_reconfigure_flow(hass)
+
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {"host": "http://other.local:8080", "verify_ssl": True},
+            )
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "already_configured"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+
+    async def _reconfigure_with_device(self, hass, device_name, host):
+        """Reconfigure an entry whose http_1 device was last seen as `device_name`."""
+        entry = _make_existing_entry(hass)
+        dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, f"{entry.entry_id}_http_1")},
+            name=device_name,
+        )
+        result = await entry.start_reconfigure_flow(hass)
+        with _patched_client():
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {"host": host, "verify_ssl": True}
+            )
+            await hass.async_block_till_done()
+        return entry, result
+
+    async def test_moved_instance_is_accepted(self, hass, mock_setup_entry):
+        entry, result = await self._reconfigure_with_device(
+            hass, HTTP_MONITOR_UP["name"], "http://10.0.0.7:8080"
+        )
+
+        assert result["reason"] == "reconfigure_successful"
+        assert entry.data["host"] == "http://10.0.0.7:8080"
+
+    async def test_different_instance_aborts(self, hass, mock_setup_entry):
+        entry, result = await self._reconfigure_with_device(
+            hass, "Another Instance's Monitor", "http://other.local:8080"
+        )
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "different_instance"
+        assert entry.data["host"] == "http://kuvasz.local:8080"
+        mock_setup_entry.assert_not_called()
+
+    async def test_same_host_skips_instance_check(self, hass, mock_setup_entry):
+        _, result = await self._reconfigure_with_device(
+            hass, "Another Instance's Monitor", "http://kuvasz.local:8080"
+        )
+
+        assert result["reason"] == "reconfigure_successful"
+
+    async def test_connection_error_keeps_form_with_input(self, hass):
+        entry = _make_existing_entry(hass)
+        result = await entry.start_reconfigure_flow(hass)
+
+        with _patched_client(settings_error=KuvaszApiError("down")):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {"host": "http://typo.local:8080", "verify_ssl": True},
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"] == {"base": "cannot_connect"}
+        host_key = next(k for k in result["data_schema"].schema if str(k) == "host")
+        assert host_key.description == {"suggested_value": "http://typo.local:8080"}
+        assert entry.data["host"] == "http://kuvasz.local:8080"
