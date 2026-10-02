@@ -174,6 +174,18 @@ class TestCoordinatorFetch:
 
         assert coordinator.data.monitor_stats("http", 9999) == {}
 
+    async def test_monitor_lookup_by_type_and_id(self, hass):
+        """Monitors of different types may share an ID without colliding."""
+        push_with_same_id = {**PUSH_MONITOR_UP, "id": 1}
+        client = _make_client(monitors=[HTTP_MONITOR_UP, push_with_same_id])
+        coordinator = KuvaszCoordinator(hass, client, scan_interval=30)
+
+        await coordinator.async_refresh()
+
+        assert coordinator.data.monitor("http", 1)["name"] == "My Website"
+        assert coordinator.data.monitor("push", 1)["name"] == "My Cron Job"
+        assert coordinator.data.monitor("http", 9999) == {}
+
 
 class TestCoordinatorMonitorFiltering:
     async def test_selected_monitors_filters_results(self, hass):

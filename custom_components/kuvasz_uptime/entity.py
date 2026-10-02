@@ -42,10 +42,7 @@ class KuvaszMonitorEntity(CoordinatorEntity[KuvaszCoordinator]):
 
     @property
     def _monitor_data(self) -> dict[str, Any]:
-        for m in self.coordinator.data.monitors:
-            if m["id"] == self._monitor_id and m["_type"] == self._monitor_type:
-                return m
-        return {}
+        return self.coordinator.data.monitor(self._monitor_type, self._monitor_id)
 
     @property
     def available(self) -> bool:

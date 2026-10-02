@@ -57,7 +57,7 @@ rules:
 
   # Gold
   devices: done
-  diagnostics: todo
+  diagnostics: done
   discovery:
     status: exempt
     comment: Kuvasz instances do not announce themselves via zeroconf, SSDP or DHCP.

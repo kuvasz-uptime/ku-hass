@@ -41,11 +41,16 @@ class KuvaszCoordinatorData:
     ) -> None:
         """Initialize coordinator data with monitors, stats and read-only types."""
         self.monitors = monitors
+        self._monitors_by_key = {(m["_type"], m["id"]): m for m in monitors}
         # stats keyed by "{type}_{id}"
         self.stats = stats
         self.read_only_types = read_only_types
         self.version_info: dict[str, Any] = version_info or {}
         self.update_checks_enabled = update_checks_enabled
+
+    def monitor(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
+        """Return the given monitor's data, or empty dict if it no longer exists."""
+        return self._monitors_by_key.get((monitor_type, monitor_id), {})
 
     def monitor_stats(self, monitor_type: str, monitor_id: int) -> dict[str, Any]:
         """Return stats dict for the given monitor, or empty dict if unavailable."""

@@ -635,7 +635,7 @@ class TestAvailability:
         entities = await _setup_integration(hass, coordinator)
         assert all(e.available for e in entities)
 
-        coordinator.data.monitors = []
+        coordinator.data = KuvaszCoordinatorData(monitors=[], stats={})
 
         assert not any(e.available for e in entities)
 
