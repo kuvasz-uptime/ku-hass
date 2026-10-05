@@ -2,5 +2,5 @@ aiohttp
 mypy==2.4.0
 pytest
 pytest-asyncio
-pytest-homeassistant-custom-component==0.13.367
+pytest-homeassistant-custom-component==0.13.368
 ruff==0.16.10
