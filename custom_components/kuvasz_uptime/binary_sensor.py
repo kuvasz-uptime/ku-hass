@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, override
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 
 from .const import (
     MONITOR_TYPE_DNS,
