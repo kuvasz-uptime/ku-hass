@@ -1,7 +1,7 @@
 # Kuvasz Uptime - Home Assistant Integration
 
 [![CI](https://github.com/kuvasz-uptime/ku-hass/actions/workflows/tests.yml/badge.svg)](https://github.com/kuvasz-uptime/ku-hass/actions/workflows/tests.yml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/integration)
+[![Marketplace](https://img.shields.io/badge/Home%20Assistant-Marketplace-blue.svg)](https://www.home-assistant.io/integrations/marketplace/)
 
 A [Home Assistant](https://www.home-assistant.io/) integration for [Kuvasz Uptime](https://kuvasz-uptime.dev) - a self-hosted, open-source uptime and SSL monitoring service.
 
@@ -55,23 +55,27 @@ Every integration entry also has a server device, named after the entry (e.g. **
 
 ## Requirements
 
-- Home Assistant 2026.8 or newer
+- Home Assistant 2026.10 or newer
 - Kuvasz Uptime 3.2.0 or newer
 - A running [Kuvasz](https://kuvasz-uptime.dev) instance (self-hosted)
 - Your [API key](https://kuvasz-uptime.dev/setup/configuration/#api-key) for your Kuvasz instance
 
 ## Installation
 
-### Via HACS (recommended)
+### Via the Marketplace (recommended)
 
-This integration is available in the default HACS store - no custom repository needed.
+This integration is listed in the Home Assistant [Marketplace](https://www.home-assistant.io/integrations/marketplace/) (built into Home Assistant since 2026.11) - no custom repository needed.
 
-1. In Home Assistant, open **HACS**.
+1. In Home Assistant, go to **Settings → Marketplace**.
 2. Search for **Kuvasz Uptime** and open it.
-3. Click **Download**.
-4. Restart Home Assistant.
+3. Select **Install**. The first time you install something from the Marketplace, you have to accept the risks first.
+4. Home Assistant opens the setup flow right away - no restart needed. Continue with [Configuration](#configuration).
 
-Or use the direct link: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kuvasz-uptime&repository=ku-hass&category=integration)
+Or use the direct link: [![Open your Home Assistant instance and open a repository inside the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=kuvasz-uptime&repository=ku-hass&category=integration)
+
+New versions show up under **Settings → Updates**. After updating, a repair asks you to restart Home Assistant.
+
+**Home Assistant 2026.10:** the Marketplace is not available yet, so install the integration via [HACS](https://hacs.xyz) instead: open **HACS**, search for **Kuvasz Uptime**, click **Download** and restart Home Assistant. When you update to 2026.11 or newer, the Marketplace takes over the HACS installation automatically.
 
 ### Manual
 
@@ -218,7 +222,7 @@ You can also download diagnostics from the integration entry's menu (**Download 
 
 1. Go to **Settings → Devices & Services → Kuvasz Uptime**.
 2. Open the menu of the entry and choose **Delete**. This removes all of its devices and entities. Nothing changes on your Kuvasz instance.
-3. To uninstall the integration itself, open **HACS**, find **Kuvasz Uptime**, choose **Remove** from its menu, and restart Home Assistant. For a manual installation, delete `config/custom_components/kuvasz_uptime/` and restart.
+3. To uninstall the integration itself, go to **Settings → Marketplace**, open **Kuvasz Uptime**, and choose **Uninstall** from its menu. If an entry is still set up, the Marketplace offers **Delete and uninstall**, which also does step 2. A repair then asks you to restart Home Assistant. On Home Assistant 2026.10, open **HACS** instead, choose **Remove** from the integration's menu, and restart. For a manual installation, delete `config/custom_components/kuvasz_uptime/` and restart.
 
 ## Contributing
 

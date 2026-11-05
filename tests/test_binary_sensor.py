@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 
 from custom_components.kuvasz_uptime.api import KuvaszClient
 from custom_components.kuvasz_uptime.const import DOMAIN

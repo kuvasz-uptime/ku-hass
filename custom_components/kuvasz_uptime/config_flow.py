@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, override
 
-import voluptuous as vol
+import probatio
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryState,
@@ -58,16 +58,22 @@ _LOGGER = logging.getLogger(__name__)
 # Masks the key in the form, including when reconfigure pre-fills the stored one.
 API_KEY_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 
-STEP_USER_SCHEMA = vol.Schema(
+STEP_USER_SCHEMA = probatio.Schema(
     {
-        vol.Required(CONF_NAME): str,
-        vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_API_KEY): API_KEY_SELECTOR,
-        vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
-        vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+        probatio.Required(CONF_NAME): str,
+        probatio.Required(CONF_HOST): str,
+        probatio.Optional(CONF_API_KEY): API_KEY_SELECTOR,
+        probatio.Required(
+            CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL
+        ): BooleanSelector(),
+        probatio.Required(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): probatio.All(
+            int, probatio.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
         ),
-        vol.Required(CONF_STATS_PERIOD, default=DEFAULT_STATS_PERIOD): SelectSelector(
+        probatio.Required(
+            CONF_STATS_PERIOD, default=DEFAULT_STATS_PERIOD
+        ): SelectSelector(
             SelectSelectorConfig(
                 options=STATS_PERIOD_OPTIONS,
                 mode=SelectSelectorMode.DROPDOWN,
@@ -76,13 +82,17 @@ STEP_USER_SCHEMA = vol.Schema(
     }
 )
 
-STEP_REAUTH_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): API_KEY_SELECTOR})
+STEP_REAUTH_SCHEMA = probatio.Schema(
+    {probatio.Required(CONF_API_KEY): API_KEY_SELECTOR}
+)
 
-STEP_RECONFIGURE_SCHEMA = vol.Schema(
+STEP_RECONFIGURE_SCHEMA = probatio.Schema(
     {
-        vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_API_KEY): API_KEY_SELECTOR,
-        vol.Required(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL): BooleanSelector(),
+        probatio.Required(CONF_HOST): str,
+        probatio.Optional(CONF_API_KEY): API_KEY_SELECTOR,
+        probatio.Required(
+            CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL
+        ): BooleanSelector(),
     }
 )
 
@@ -174,7 +184,7 @@ def _build_monitors_schema(
     current_stats_period: str,
     *,
     include_settings: bool,
-) -> vol.Schema:
+) -> probatio.Schema:
     options: list[SelectOptionDict] = [
         {
             "value": monitor_key(m["_type"], m["id"]),
@@ -191,20 +201,20 @@ def _build_monitors_schema(
         else all_keys
     )
 
-    fields: dict[vol.Marker, Any] = {}
+    fields: dict[probatio.Marker, Any] = {}
     if include_settings:
-        scan_key = vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval)
-        fields[scan_key] = vol.All(
-            int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+        scan_key = probatio.Required(CONF_SCAN_INTERVAL, default=current_scan_interval)
+        fields[scan_key] = probatio.All(
+            int, probatio.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
         )
-        period_key = vol.Required(CONF_STATS_PERIOD, default=current_stats_period)
+        period_key = probatio.Required(CONF_STATS_PERIOD, default=current_stats_period)
         fields[period_key] = SelectSelector(
             SelectSelectorConfig(
                 options=STATS_PERIOD_OPTIONS,
                 mode=SelectSelectorMode.DROPDOWN,
             )
         )
-    monitors_key = vol.Required(CONF_SELECTED_MONITORS, default=default_selected)
+    monitors_key = probatio.Required(CONF_SELECTED_MONITORS, default=default_selected)
     fields[monitors_key] = SelectSelector(
         SelectSelectorConfig(
             options=options,
@@ -212,7 +222,7 @@ def _build_monitors_schema(
             mode=SelectSelectorMode.LIST,
         )
     )
-    return vol.Schema(fields)
+    return probatio.Schema(fields)
 
 
 class KuvaszConfigFlow(ConfigFlow, domain=DOMAIN):
